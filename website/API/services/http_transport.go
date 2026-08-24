@@ -47,3 +47,10 @@ func getUpstreamClients() upstreamClients {
 	})
 	return sharedUpstreamClients
 }
+
+// setUpstreamClientsForTest 供测试注入自定义 http.Client（替换共享单例的 stream 客户端）。
+// 仅测试使用。
+func setUpstreamClientsForTest(clients upstreamClients) {
+	upstreamClientsOnce.Do(func() {})
+	sharedUpstreamClients = clients
+}

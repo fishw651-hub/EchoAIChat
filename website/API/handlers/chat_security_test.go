@@ -25,6 +25,10 @@ func (s *countingChatService) ChatCompletion(context.Context, *services.ChatComp
 	return &services.ChatCompletionResponse{}, nil
 }
 
+func (s *countingChatService) ChatCompletionViaStream(context.Context, *services.ChatCompletionRequest) (*services.ChatCompletionResponse, error) {
+	return s.ChatCompletion(context.Background(), nil)
+}
+
 func (s *countingChatService) ChatCompletionStream(context.Context, *services.ChatCompletionRequest, io.Writer) (*services.ChatCompletionResponse, error) {
 	s.calls++
 	return &services.ChatCompletionResponse{}, nil

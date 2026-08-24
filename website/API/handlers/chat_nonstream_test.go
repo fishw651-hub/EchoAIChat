@@ -30,6 +30,10 @@ func (s *nonStream429Service) ChatCompletion(context.Context, *services.ChatComp
 	}
 }
 
+func (s *nonStream429Service) ChatCompletionViaStream(context.Context, *services.ChatCompletionRequest) (*services.ChatCompletionResponse, error) {
+	return s.ChatCompletion(context.Background(), nil)
+}
+
 type recordingBillingService struct {
 	releases int
 	settles  int
@@ -71,6 +75,10 @@ func (s *nonStreamSuccessService) ChatCompletion(context.Context, *services.Chat
 		return nil, err
 	}
 	return &result, nil
+}
+
+func (s *nonStreamSuccessService) ChatCompletionViaStream(context.Context, *services.ChatCompletionRequest) (*services.ChatCompletionResponse, error) {
+	return s.ChatCompletion(context.Background(), nil)
 }
 
 func TestChatCompletionsMapUpstream429BeforeWritingResponse(t *testing.T) {

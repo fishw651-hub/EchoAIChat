@@ -22,6 +22,7 @@ type ChatHandler struct {
 
 type chatCompletionService interface {
 	ChatCompletion(context.Context, *services.ChatCompletionRequest) (*services.ChatCompletionResponse, error)
+	ChatCompletionViaStream(context.Context, *services.ChatCompletionRequest) (*services.ChatCompletionResponse, error)
 }
 
 type chatBillingService interface {
@@ -238,8 +239,16 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 		}
 	}
 
-	result, err := h.deepseekService.ChatCompletion(c.Request.Context(), dsReq)
-	if err != nil {
+	// 后台开关：开启后以 SSE 流式调用上游并聚合（长回复不易触发非流式空闲超时），关闭为传统非流式
+	var result *services.ChatCompletionResponse
+	var callErr error
+	if services.GetChatUpstreamStreamEnabled() {
+		result, callErr = h.deepseekService.ChatCompletionViaStream(c.Request.Context(), dsReq)
+	} else {
+		result, callErr = h.deepseekService.ChatCompletion(c.Request.Context(), dsReq)
+	}
+	if callErr != nil {
+		err := callErr
 		_ = h.billingService.Release(reservation.ID)
 		releaseFeature()
 		if writeChatUpstreamError(c, err) {

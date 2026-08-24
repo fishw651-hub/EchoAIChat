@@ -452,6 +452,300 @@ func (s *DeepSeekService) ChatCompletionStream(ctx context.Context, req *ChatCom
 	return finalUsage, nil
 }
 
+// chatStreamChunk 是上游 SSE 增量 chunk 的解析结构（OpenAI chat.completion.chunk 形态）
+type chatStreamChunk struct {
+	ID      string `json:"id"`
+	Object  string `json:"object"`
+	Created int64  `json:"created"`
+	Model   string `json:"model"`
+	Choices []struct {
+		Index int `json:"index"`
+		Delta struct {
+			Role             string `json:"role"`
+			Content          string `json:"content"`
+			ReasoningContent string `json:"reasoning_content"`
+			ToolCalls        []struct {
+				Index    int    `json:"index"`
+				ID       string `json:"id"`
+				Type     string `json:"type"`
+				Function struct {
+					Name      string `json:"name"`
+					Arguments string `json:"arguments"`
+				} `json:"function"`
+			} `json:"tool_calls"`
+		} `json:"delta"`
+		FinishReason string `json:"finish_reason"`
+	} `json:"choices"`
+	Usage *chatStreamUsage `json:"usage"`
+}
+
+// chatStreamUsage 是 SSE chunk 内 usage 字段的解析结构
+type chatStreamUsage struct {
+	PromptTokens          int `json:"prompt_tokens"`
+	CompletionTokens      int `json:"completion_tokens"`
+	TotalTokens           int `json:"total_tokens"`
+	PromptCacheHitTokens  int `json:"prompt_cache_hit_tokens"`
+	PromptCacheMissTokens int `json:"prompt_cache_miss_tokens"`
+}
+
+// streamAggregator 把流式增量 chunk 聚合回完整 ChatCompletionResponse。
+// content/reasoning_content 逐段拼接；tool_calls 按 index 聚合（id/type/name 取首次
+// 出现、arguments 片段拼接）；usage 取最终 usage-bearing chunk。
+type streamAggregator struct {
+	id         string
+	object     string
+	created    int64
+	model      string
+	role       string
+	content    strings.Builder
+	reasoning  strings.Builder
+	toolCalls  map[int]*ToolCall
+	finish     string
+	hasUsage   bool
+	usage      chatStreamUsage
+	sawChunk   bool
+	streamedNS int
+}
+
+func (a *streamAggregator) add(chunk *chatStreamChunk, streamedBytes int) {
+	a.sawChunk = true
+	a.streamedNS += streamedBytes
+	if a.id == "" {
+		a.id = chunk.ID
+		a.object = chunk.Object
+		a.created = chunk.Created
+		a.model = chunk.Model
+	}
+	if chunk.Usage != nil {
+		a.usage = *chunk.Usage
+		a.hasUsage = true
+	}
+	for i := range chunk.Choices {
+		choice := &chunk.Choices[i]
+		if choice.Delta.Role != "" {
+			a.role = choice.Delta.Role
+		}
+		a.content.WriteString(choice.Delta.Content)
+		a.reasoning.WriteString(choice.Delta.ReasoningContent)
+		for j := range choice.Delta.ToolCalls {
+			tc := &choice.Delta.ToolCalls[j]
+			existing, ok := a.toolCalls[tc.Index]
+			if !ok {
+				existing = &ToolCall{Function: ToolFunction{}}
+				a.toolCalls[tc.Index] = existing
+			}
+			if tc.ID != "" {
+				existing.ID = tc.ID
+			}
+			if tc.Type != "" {
+				existing.Type = tc.Type
+			}
+			if tc.Function.Name != "" {
+				existing.Function.Name = tc.Function.Name
+			}
+			existing.Function.Arguments += tc.Function.Arguments
+		}
+		if choice.FinishReason != "" {
+			a.finish = choice.FinishReason
+		}
+	}
+}
+
+func (a *streamAggregator) build(model string) *ChatCompletionResponse {
+	result := &ChatCompletionResponse{
+		ID:      a.id,
+		Object:  "chat.completion",
+		Created: a.created,
+		Model:   a.model,
+	}
+	if result.Model == "" {
+		result.Model = model
+	}
+	choice := struct {
+		Index   int `json:"index"`
+		Message struct {
+			Role             string     `json:"role"`
+			Content          string     `json:"content"`
+			ReasoningContent string     `json:"reasoning_content"`
+			ToolCalls        []ToolCall `json:"tool_calls,omitempty"`
+		} `json:"message"`
+		FinishReason string `json:"finish_reason"`
+	}{}
+	choice.Message.Role = a.role
+	if choice.Message.Role == "" {
+		choice.Message.Role = "assistant"
+	}
+	choice.Message.Content = a.content.String()
+	choice.Message.ReasoningContent = a.reasoning.String()
+	if len(a.toolCalls) > 0 {
+		indices := make([]int, 0, len(a.toolCalls))
+		for idx := range a.toolCalls {
+			indices = append(indices, idx)
+		}
+		for i := 0; i < len(indices); i++ {
+			for j := i + 1; j < len(indices); j++ {
+				if indices[j] < indices[i] {
+					indices[i], indices[j] = indices[j], indices[i]
+				}
+			}
+		}
+		for _, idx := range indices {
+			choice.Message.ToolCalls = append(choice.Message.ToolCalls, *a.toolCalls[idx])
+		}
+	}
+	choice.FinishReason = a.finish
+	result.Choices = append(result.Choices, choice)
+	if a.hasUsage {
+		result.Usage.PromptTokens = a.usage.PromptTokens
+		result.Usage.CompletionTokens = a.usage.CompletionTokens
+		result.Usage.TotalTokens = a.usage.TotalTokens
+		result.Usage.PromptCacheHitTokens = a.usage.PromptCacheHitTokens
+		result.Usage.PromptCacheMissTokens = a.usage.PromptCacheMissTokens
+	}
+	return result
+}
+
+// ChatCompletionViaStream 流式调用上游并聚合为完整响应（后台 chat_upstream_stream 开关启用时走此路径）。
+// 与 ChatCompletion 的差异仅在传输层：上游以 stream=true 返回 SSE，服务端逐 chunk 聚合，
+// 返回的 ChatCompletionResponse 与非流式路径结构一致，计费与客户端契约不变。
+// ctx 来自客户端请求：客户端断开后上游流随之取消。
+func (s *DeepSeekService) ChatCompletionViaStream(ctx context.Context, req *ChatCompletionRequest) (*ChatCompletionResponse, error) {
+	target, err := s.resolveUpstream(req.Model)
+	if err != nil {
+		return nil, err
+	}
+	req = adaptRequestForFormat(req, target.Format)
+
+	req.Stream = true
+	req.StreamOptions = &StreamOptions{IncludeUsage: true}
+
+	jsonData, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("序列化%s上游请求失败: %w", target.Provider, err)
+	}
+
+	agg := &streamAggregator{toolCalls: map[int]*ToolCall{}}
+	// 重试仅对"尚未收到任何 chunk"的失败安全：收到部分内容后重试会拼出重复文本
+	var lastErr error
+	for attempt := 0; attempt < maxUpstreamAttempts; attempt++ {
+		result, err := s.chatStreamAggregateAttempt(ctx, target, jsonData, agg)
+		if err == nil {
+			return result, nil
+		}
+		lastErr = err
+		if agg.sawChunk {
+			return nil, err
+		}
+		if attempt+1 == maxUpstreamAttempts {
+			break
+		}
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		delay, retry := upstreamRetryDelay(err, s.clock()())
+		if !retry {
+			return nil, err
+		}
+		log.Printf("[upstream retry] provider=%s model=%s next_attempt=%d category=%s delay=%s", target.Provider, req.Model, attempt+2, upstreamRetryCategory(err), delay)
+		if err := s.wait(ctx, delay); err != nil {
+			return nil, err
+		}
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+	}
+
+	return nil, lastErr
+}
+
+// chatStreamAggregateAttempt 发起一次流式上游请求并把 SSE 增量聚合进 agg。
+// 截断（scanner 错误）时返回部分用量估算 + error，由调用方决定释放/结算。
+func (s *DeepSeekService) chatStreamAggregateAttempt(ctx context.Context, target *upstreamTarget, jsonData []byte, agg *streamAggregator) (*ChatCompletionResponse, error) {
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, target.BaseURL+"/chat/completions", bytes.NewReader(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("创建%s上游请求失败: %w", target.Provider, err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+target.APIKey)
+	httpReq.Header.Set("Accept", "text/event-stream")
+
+	resp, err := getUpstreamClients().stream.Do(httpReq)
+	if err != nil {
+		return nil, &upstreamTransportError{Provider: target.Provider, Err: err}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, readUpstreamHTTPError(target.Provider, resp)
+	}
+
+	streamedBytes := 0
+	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.HasPrefix(line, "data: ") {
+			continue
+		}
+		data := strings.TrimPrefix(line, "data: ")
+		if data == "[DONE]" {
+			break
+		}
+
+		var chunk chatStreamChunk
+		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+			continue
+		}
+		streamedBytes += len(data)
+		agg.add(&chunk, len(data))
+	}
+
+	// 必须检查扫描错误：上游单行超过缓冲区上限（1MB）或连接中断时 Scan 循环会静默结束。
+	// 已收到部分内容的返回部分用量估算（completion 按流出字节/4 粗估）；
+	// 什么都没收到的返回 nil，调用方走普通错误路径全额退预留。
+	if err := scanner.Err(); err != nil {
+		if agg.sawChunk {
+			partial := agg.build(agg.model)
+			if !agg.hasUsage {
+				promptEstimate := 0
+				for _, m := range s.streamRequestMessages(jsonData) {
+					if str, ok := m.Content.(string); ok {
+						promptEstimate += len(str) / 4
+					} else if b, jerr := json.Marshal(m.Content); jerr == nil {
+						promptEstimate += len(b) / 4
+					}
+				}
+				partial.Usage.PromptTokens = promptEstimate
+				partial.Usage.CompletionTokens = agg.streamedNS / 4
+			}
+			return partial, fmt.Errorf("读取%s上游流失败（响应被截断）: %w", target.Provider, err)
+		}
+		return nil, fmt.Errorf("读取%s上游流失败（响应被截断）: %w", target.Provider, err)
+	}
+
+	if !agg.sawChunk {
+		return nil, fmt.Errorf("上游 %s 流式响应为空", target.Provider)
+	}
+
+	result := agg.build(agg.model)
+	if !agg.hasUsage {
+		log.Printf("[billing] 上游 %s 未返回 usage，流式聚合按零 token 结算（price_per_call 仍适用）", target.Provider)
+	}
+	return result, nil
+}
+
+// streamRequestMessages 从已序列化的请求体还原 messages，仅供截断时粗估 prompt 用量
+func (s *DeepSeekService) streamRequestMessages(jsonData []byte) []ChatMessage {
+	var req struct {
+		Messages []ChatMessage `json:"messages"`
+	}
+	if err := json.Unmarshal(jsonData, &req); err != nil {
+		return nil
+	}
+	return req.Messages
+}
+
 func (s *DeepSeekService) FetchModels() ([]DeepSeekModel, error) {
 	apiKey, err := s.getActiveAPIKey()
 	if err != nil {

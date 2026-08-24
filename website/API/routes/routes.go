@@ -333,6 +333,9 @@ func SetupRoutes(r *gin.Engine) {
 			adminGroup.GET("/maintenance-config", adminHandler.GetMaintenanceConfig)
 			adminGroup.PUT("/maintenance-config", adminHandler.UpdateMaintenanceConfig)
 
+			adminGroup.GET("/chat-stream-config", adminHandler.GetChatStreamConfig)
+			adminGroup.PUT("/chat-stream-config", adminHandler.UpdateChatStreamConfig)
+
 			adminGroup.GET("/users", adminHandler.ListUsers)
 			adminGroup.POST("/users", adminHandler.CreateUser)
 			adminGroup.GET("/users/:id", adminHandler.GetUser)

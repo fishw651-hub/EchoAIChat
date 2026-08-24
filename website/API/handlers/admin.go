@@ -380,6 +380,38 @@ func (h *AdminHandler) UpdateMaintenanceConfig(c *gin.Context) {
 	})
 }
 
+// GetChatStreamConfig 读取 AI 上游流式调用开关
+func (h *AdminHandler) GetChatStreamConfig(c *gin.Context) {
+	utils.Success(c, gin.H{
+		"enabled": services.GetChatUpstreamStreamEnabled(),
+	})
+}
+
+// UpdateChatStreamConfig 更新 AI 上游流式调用开关
+func (h *AdminHandler) UpdateChatStreamConfig(c *gin.Context) {
+	var req struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, "参数错误")
+		return
+	}
+
+	oldEnabled := services.GetChatUpstreamStreamEnabled()
+
+	services.SaveSystemConfig(services.ChatUpstreamStreamConfigKey, fmt.Sprintf("%t", req.Enabled), "AI 上游流式调用开关")
+
+	auditSvc.Log(c, services.AuditActionUpdateConfig, services.AuditTargetConfig, "chat_stream_config",
+		gin.H{"enabled": oldEnabled},
+		gin.H{"enabled": req.Enabled},
+	)
+
+	utils.Success(c, gin.H{
+		"message": "AI 调用模式配置保存成功",
+		"enabled": req.Enabled,
+	})
+}
+
 func contains(s, substr string) bool {
 	return len(substr) == 0 ||
 		len(s) >= len(substr) &&

@@ -126,7 +126,7 @@ function showSection(name) {
         case 'network': loadNetworkAgents(); loadPresetTags(); break;
         case 'models': loadModelPrices(); break;
         case 'plans': loadPlans(); loadDefaultQuotas(); break;
-        case 'config': loadConfig(); loadTLSConfig(); loadMaintenanceConfig(); loadAiReviewConfig(); break;
+        case 'config': loadConfig(); loadTLSConfig(); loadMaintenanceConfig(); loadChatStreamConfig(); loadAiReviewConfig(); break;
         case 'domain': loadDomainConfig(); break;
         case 'apidocs': break; // 纯静态页面无需加载
         case 'orders': loadOrders(); break;
@@ -1584,6 +1584,23 @@ async function saveMaintenanceConfig() {
         toast('维护模式配置保存成功', 'success');
         $('maintStatus').textContent = '✅ 配置已生效';
     } catch(e) { toast(e.message, 'error'); $('maintStatus').textContent = '❌ '+e.message; }
+}
+
+// ======== AI 上游调用模式 ========
+async function loadChatStreamConfig() {
+    try {
+        const r = await api.get('/admin/chat-stream-config');
+        const d = r.data || {};
+        $('chatStreamEnabled').checked = d.enabled || false;
+        $('chatStreamStatus').textContent = d.enabled ? '当前：流式调用上游' : '当前：非流式调用（默认）';
+    } catch(e) { $('chatStreamStatus').textContent = '加载失败: '+e.message; }
+}
+async function saveChatStreamConfig() {
+    try {
+        const r = await api.put('/admin/chat-stream-config', { enabled: $('chatStreamEnabled').checked });
+        toast('AI 调用模式配置保存成功', 'success');
+        $('chatStreamStatus').textContent = '✅ 配置已生效';
+    } catch(e) { toast(e.message, 'error'); $('chatStreamStatus').textContent = '❌ '+e.message; }
 }
 
 // ======== 版本管理 ========
