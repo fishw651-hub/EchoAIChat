@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import '../providers/settings_provider.dart';
+import '../main.dart' show localeProvider;
 import '../providers/memory_provider.dart';
 import '../services/backup_service.dart';
 import '../agreements/user_agreement.dart';
@@ -86,6 +87,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _buildConfigSection,
       () => _sectionHeader(l10n.get('theme')),
       _buildThemeSection,
+      () => _sectionHeader(l10n.get('language')),
+      _buildLanguageSection,
       () => _sectionHeader(l10n.get('agreementsAndLegal')),
       _buildAgreementsSection,
       () => _sectionHeader(l10n.get('feedback')),
@@ -712,6 +715,65 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ref
                         .read(settingsProvider.notifier)
                         .updateThemeMode(_themeModeToString(selection.first));
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLanguageSection() {
+    final s = ref.watch(settingsProvider);
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    return _sectionCard(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  EchoIconBadge(
+                    icon: Icons.language_rounded,
+                    color: scheme.tertiary,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      l10n.get('language'),
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppTheme.space3),
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<String>(
+                  showSelectedIcon: false,
+                  segments: [
+                    ButtonSegment(
+                      value: 'zh',
+                      icon: const Icon(Icons.text_fields, size: 16),
+                      label: Text(l10n.get('chinese')),
+                    ),
+                    ButtonSegment(
+                      value: 'en',
+                      icon: const Icon(Icons.abc_rounded, size: 16),
+                      label: Text(l10n.get('english')),
+                    ),
+                  ],
+                  selected: {s.locale},
+                  onSelectionChanged: (selection) {
+                    final newLocale = selection.first;
+                    ref.read(settingsProvider.notifier).updateLocale(newLocale);
+                    // 同步给 localeProvider 使 MaterialApp 立即切换
+                    ref.read(localeProvider.notifier).state = Locale(newLocale);
                   },
                 ),
               ),

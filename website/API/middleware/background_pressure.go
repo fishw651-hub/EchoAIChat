@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"aichat-api/services"
+	"aichat-api/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,7 +16,7 @@ func BackgroundPressure(limiter *services.AdaptiveLimiter) gin.HandlerFunc {
 			c.Header("Retry-After", "1")
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
 				"code":    http.StatusTooManyRequests,
-				"message": "服务器正在处理较多同步任务，请稍后重试",
+				"message": utils.T(c, "err.sync.background_busy"),
 			})
 			return
 		}

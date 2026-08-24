@@ -19,6 +19,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       totalCompletionTokens: totalCompletionTokens,
       themeMode: prefs.getString('theme_mode') ?? 'system',
       selectedModel: prefs.getString('selected_model') ?? SettingsState.defaultModel,
+      locale: prefs.getString('locale') ?? 'zh',
     );
     // 主题外观固定为“静谧回响”，仅保留系统/浅色/深色模式。
     await prefs.remove('primary_color');
@@ -91,6 +92,12 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     state = state.copyWith(selectedModel: model);
   }
 
+  Future<void> updateLocale(String locale) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('locale', locale);
+    state = state.copyWith(locale: locale);
+  }
+
   Future<void> resetAll() async {
     final prefs = await SharedPreferences.getInstance();
     // 只清除设置相关 key，保留 auth/sync/quota/agreement/locale/device 等其他 key
@@ -110,6 +117,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       'selected_model',
       'thinking_mode',
       'temperature',
+      'locale',
     ]) {
       await prefs.remove(key);
     }
@@ -126,6 +134,7 @@ class SettingsState {
   final int totalCompletionTokens;
   final String themeMode;
   final String selectedModel;
+  final String locale;
 
   const SettingsState({
     this.maxShortTermRounds = 20,
@@ -134,6 +143,7 @@ class SettingsState {
     this.totalCompletionTokens = 0,
     this.themeMode = 'system',
     this.selectedModel = defaultModel,
+    this.locale = 'zh',
   });
 
   int get totalTokens => totalPromptTokens + totalCompletionTokens;
@@ -145,6 +155,7 @@ class SettingsState {
     int? totalCompletionTokens,
     String? themeMode,
     String? selectedModel,
+    String? locale,
   }) {
     return SettingsState(
       maxShortTermRounds: maxShortTermRounds ?? this.maxShortTermRounds,
@@ -154,6 +165,7 @@ class SettingsState {
           totalCompletionTokens ?? this.totalCompletionTokens,
       themeMode: themeMode ?? this.themeMode,
       selectedModel: selectedModel ?? this.selectedModel,
+      locale: locale ?? this.locale,
     );
   }
 }

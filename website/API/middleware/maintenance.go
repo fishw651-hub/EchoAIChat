@@ -26,9 +26,11 @@ const maintenanceBypassCookie = "maint_key"
 
 // 默认维护页：main.go 启动时会用内嵌的 maintenance.html 覆盖（SetMaintenancePageHTML）
 var defaultMaintenancePage = `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8">` +
-	`<meta name="viewport" content="width=device-width, initial-scale=1"><title>站点更新维护中</title></head>` +
+	`<meta name="viewport" content="width=device-width, initial-scale=1"><title>站点更新维护中｜Site Maintenance</title></head>` +
 	`<body style="font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0">` +
-	`<div style="text-align:center"><h1>站点更新维护中</h1><p>我们正在进行站点更新维护，请稍后再来。</p></div></body></html>`
+	`<div style="text-align:center"><h1>站点更新维护中</h1><p>我们正在进行站点更新维护，请稍后再来。</p>` +
+	`<hr style="border:none;border-top:1px solid #ddd;margin:18px 0">` +
+	`<h1 style="font-size:19px">Site Maintenance</h1><p>We are updating the site. Please come back later.</p></div></body></html>`
 
 var (
 	maintenancePageMu   sync.RWMutex

@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"aichat-api/utils"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,7 +19,7 @@ func RequireClientVersion(minimumVersionCode int) gin.HandlerFunc {
 		if err != nil || versionCode < minimumVersionCode {
 			c.AbortWithStatusJSON(http.StatusUpgradeRequired, gin.H{
 				"code":                 "upgrade_required",
-				"message":              "客户端版本过低，请更新后重试",
+				"message":              utils.T(c, "err.client.version_too_low"),
 				"minimum_version_code": minimumVersionCode,
 			})
 			return

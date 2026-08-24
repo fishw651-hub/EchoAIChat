@@ -59,19 +59,19 @@ func (h *PaymentHandler) GetPlans(c *gin.Context) {
 
 func (h *PaymentHandler) Subscribe(c *gin.Context) {
 	if !isProviderActive("easypay") {
-		utils.BadRequest(c, "当前支付渠道非易支付，请在后台切换")
+		utils.BadRequest(c, utils.T(c, "err.payment.provider_not_easypay"))
 		return
 	}
 
 	var req SubscribeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, "参数错误")
+		utils.BadRequest(c, utils.T(c, "err.auth.param_error"))
 		return
 	}
 
 	validTypes := map[string]bool{"alipay": true, "wxpay": true, "qqpay": true, "tenpay": true}
 	if !validTypes[req.PaymentType] {
-		utils.BadRequest(c, "不支持的支付方式")
+		utils.BadRequest(c, utils.T(c, "err.payment.type_unsupported"))
 		return
 	}
 
@@ -99,7 +99,7 @@ func (h *PaymentHandler) Subscribe(c *gin.Context) {
 }
 
 func (h *PaymentHandler) ZeroDrop(c *gin.Context) {
-	utils.BadRequest(c, "余额充值已下线，请购买订阅")
+	utils.BadRequest(c, utils.T(c, "err.payment.topup_offline"))
 	return
 }
 
@@ -137,23 +137,30 @@ func (h *PaymentHandler) Return(c *gin.Context) {
 	name := html.EscapeString(params["name"])
 
 	statusIcon := "&#10060;"
-	statusText := "支付失败"
+	statusText := utils.T(c, "ok.payment.failed")
 	statusColor := "#e74c3c"
-	guideText := "请返回APP重新发起支付"
+	guideText := utils.T(c, "ok.payment.failed_guide")
 
 	if tradeStatus == "TRADE_SUCCESS" {
 		statusIcon = "&#9989;"
-		statusText = "支付成功"
+		statusText = utils.T(c, "ok.payment.success")
 		statusColor = "#27ae60"
-		guideText = "请返回APP，刷新余额即可看到变化"
+		guideText = utils.T(c, "ok.payment.success_guide")
 	}
 
+	pageLang := utils.ResolveLang(c)
+	closeText := utils.T(c, "ok.payment.close_page")
+	orderLabel := utils.T(c, "ok.payment.order_label")
+	goodsLabel := utils.T(c, "ok.payment.goods_label")
+	amountLabel := utils.T(c, "ok.payment.amount_label")
+	titleText := utils.T(c, "ok.payment.page_title")
+
 	page := fmt.Sprintf(`<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="%s">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>支付结果 - AIchat</title>
+<title>%s - AIchat</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;min-height:100vh;display:flex;align-items:center;justify-content:center}
@@ -171,15 +178,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;
 <div class="icon">%s</div>
 <div class="status">%s</div>
 <div class="detail">
-	订单: <span>%s</span><br>
-	商品: <span>%s</span><br>
-	金额: <span>&yen;%s</span>
+	%s: <span>%s</span><br>
+	%s: <span>%s</span><br>
+	%s: <span>&yen;%s</span>
 </div>
 <p style="font-size:13px;color:#999;margin-bottom:20px">%s</p>
-<a class="btn" href="javascript:window.close()">关闭页面</a>
+<a class="btn" href="javascript:window.close()">%s</a>
 </div>
 </body>
-</html>`, statusColor, statusIcon, statusText, orderNo, name, money, guideText)
+</html>`, pageLang, titleText, statusColor, statusIcon, statusText, orderLabel, orderNo, goodsLabel, name, amountLabel, money, guideText, closeText)
 
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	// 页面无脚本需求：CSP 禁一切脚本/外部资源，仅允许内联样式，兜底防 XSS
@@ -192,13 +199,13 @@ func (h *PaymentHandler) GetOrderStatus(c *gin.Context) {
 
 	order, err := services.FindPaymentOrderByOrderNo(orderNo)
 	if err != nil || order == nil {
-		utils.BadRequest(c, "订单不存在")
+		utils.BadRequest(c, utils.T(c, "err.payment.order_not_found"))
 		return
 	}
 
 	userID := c.GetUint("user_id")
 	if order.UserID != userID {
-		utils.Forbidden(c, "无权查看该订单")
+		utils.Forbidden(c, utils.T(c, "err.payment.order_forbidden"))
 		return
 	}
 

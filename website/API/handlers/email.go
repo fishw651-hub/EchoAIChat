@@ -41,22 +41,22 @@ type SendCodeRequest struct {
 func (h *EmailHandler) SendCode(c *gin.Context) {
 	var req SendCodeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, "参数错误")
+		utils.BadRequest(c, utils.T(c, "err.email.param_error"))
 		return
 	}
 
 	if !utils.IsValidEmail(req.Email) {
-		utils.BadRequest(c, "邮箱格式不正确")
+		utils.BadRequest(c, utils.T(c, "err.auth.email_invalid"))
 		return
 	}
 	if req.Purpose != "register" && req.Purpose != "reset" {
-		utils.BadRequest(c, "用途参数错误")
+		utils.BadRequest(c, utils.T(c, "err.email.purpose_invalid"))
 		return
 	}
 
 	if req.Purpose == "register" {
 		if existing, err := services.FindUserByEmail(req.Email); err == nil && existing != nil {
-			utils.BadRequest(c, "该邮箱已被注册")
+			utils.BadRequest(c, utils.T(c, "err.email.already_registered"))
 			return
 		}
 	}
@@ -64,19 +64,19 @@ func (h *EmailHandler) SendCode(c *gin.Context) {
 	if req.Purpose == "reset" {
 		existing, err := services.FindUserByEmail(req.Email)
 		if err != nil || existing == nil {
-			utils.BadRequest(c, "该邮箱未注册")
+			utils.BadRequest(c, utils.T(c, "err.email.not_registered"))
 			return
 		}
 	}
 
 	if err := services.GenerateAndSendCode(req.Email, req.Purpose); err != nil {
 		log.Printf("[邮件] 发送验证码失败 email=%s purpose=%s err=%v", utils.MaskEmail(req.Email), req.Purpose, err)
-		utils.BadRequest(c, "验证码发送失败，请稍后重试")
+		utils.BadRequest(c, utils.T(c, "err.email.send_failed"))
 		return
 	}
 
 	log.Printf("[邮件] 验证码发送成功 email=%s purpose=%s", utils.MaskEmail(req.Email), req.Purpose)
-	utils.SuccessMsg(c, "验证码已发送")
+	utils.SuccessMsg(c, utils.T(c, "ok.email.code_sent"))
 }
 
 type RegisterWithCodeRequest struct {
@@ -89,23 +89,23 @@ type RegisterWithCodeRequest struct {
 func (h *EmailHandler) RegisterWithCode(c *gin.Context) {
 	var req RegisterWithCodeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, "参数错误: "+err.Error())
+		utils.BadRequest(c, utils.TP(c, "err.email.param_error_detail", map[string]string{"detail": err.Error()}))
 		return
 	}
 
 	if !utils.IsValidEmail(req.Email) {
-		utils.BadRequest(c, "邮箱格式不正确")
+		utils.BadRequest(c, utils.T(c, "err.auth.email_invalid"))
 		return
 	}
 	if !services.VerifyCode(req.Email, req.Code, "register") {
-		utils.BadRequest(c, "验证码错误或已过期")
+		utils.BadRequest(c, utils.T(c, "err.email.code_invalid"))
 		return
 	}
 
 	authService := &services.AuthService{}
 	user, err := authService.Register(req.Username, req.Email, req.Password)
 	if err != nil {
-		utils.BadRequest(c, err.Error())
+		utils.BadRequest(c, translateAuthServiceErr(c, err))
 		return
 	}
 
@@ -125,28 +125,28 @@ type ResetPasswordRequest struct {
 func (h *EmailHandler) ResetPassword(c *gin.Context) {
 	var req ResetPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, "参数错误")
+		utils.BadRequest(c, utils.T(c, "err.email.param_error"))
 		return
 	}
 
 	if !utils.IsValidEmail(req.Email) {
-		utils.BadRequest(c, "邮箱格式不正确")
+		utils.BadRequest(c, utils.T(c, "err.auth.email_invalid"))
 		return
 	}
 	if !services.VerifyCode(req.Email, req.Code, "reset") {
-		utils.BadRequest(c, "验证码错误或已过期")
+		utils.BadRequest(c, utils.T(c, "err.email.code_invalid"))
 		return
 	}
 
 	user, err := services.FindUserByEmail(req.Email)
 	if err != nil || user == nil {
-		utils.BadRequest(c, "用户不存在")
+		utils.BadRequest(c, utils.T(c, "err.auth.user_not_found_short"))
 		return
 	}
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), 12)
 	if err != nil {
-		utils.Internal(c, "密码加密失败")
+		utils.Internal(c, utils.T(c, "err.auth.bcrypt_failed"))
 		return
 	}
 
@@ -157,7 +157,7 @@ func (h *EmailHandler) ResetPassword(c *gin.Context) {
 	})
 
 	log.Printf("[用户] 密码重置成功 email=%s id=%d", utils.MaskEmail(req.Email), user.ID)
-	utils.SuccessMsg(c, "密码重置成功")
+	utils.SuccessMsg(c, utils.T(c, "ok.email.password_reset"))
 }
 
 func (h *EmailHandler) GetSMTPConfig(c *gin.Context) {
@@ -223,7 +223,7 @@ type UpdateSMTPConfigRequest struct {
 func (h *EmailHandler) UpdateSMTPConfig(c *gin.Context) {
 	var req UpdateSMTPConfigRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, "参数错误")
+		utils.BadRequest(c, utils.T(c, "err.email.param_error"))
 		return
 	}
 
@@ -231,7 +231,7 @@ func (h *EmailHandler) UpdateSMTPConfig(c *gin.Context) {
 	switch tlsMode {
 	case "", services.SMTPTLSNone, services.SMTPTLSStartTLS, services.SMTPTLSSSL:
 	default:
-		utils.BadRequest(c, "TLS 模式不支持")
+		utils.BadRequest(c, utils.T(c, "err.email.tls_unsupported"))
 		return
 	}
 	if tlsMode == "" {
@@ -248,7 +248,7 @@ func (h *EmailHandler) UpdateSMTPConfig(c *gin.Context) {
 	switch authMode {
 	case "", services.SMTPAuthNone, services.SMTPAuthPlain:
 	default:
-		utils.BadRequest(c, "SMTP 认证模式不支持")
+		utils.BadRequest(c, utils.T(c, "err.email.smtp_auth_unsupported"))
 		return
 	}
 	if authMode == "" {
@@ -270,7 +270,7 @@ func (h *EmailHandler) UpdateSMTPConfig(c *gin.Context) {
 	if req.Password != "" {
 		encPwd, err := services.Encrypt(req.Password, services.NormalizeEncryptionKey(config.AppConfig.Encryption.Key))
 		if err != nil {
-			utils.Internal(c, "密码加密失败")
+			utils.Internal(c, utils.T(c, "err.email.password_encrypt_failed"))
 			return
 		}
 		saveSMTPConfig("smtp_password", encPwd, "SMTP 密码(已加密)")

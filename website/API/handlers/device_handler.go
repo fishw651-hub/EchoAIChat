@@ -27,14 +27,14 @@ func (h *DeviceHandler) RegisterDevice(c *gin.Context) {
 		Browser    string `json:"browser"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, "参数错误")
+		utils.BadRequest(c, utils.T(c, "err.auth.param_error"))
 		return
 	}
 
 	// 查找是否已存在该设备
 	existing, err := services.FindDevice(userID, req.DeviceID)
 	if err != nil {
-		utils.Internal(c, "查询设备失败")
+		utils.Internal(c, utils.T(c, "err.device.query_failed"))
 		return
 	}
 
@@ -53,7 +53,7 @@ func (h *DeviceHandler) RegisterDevice(c *gin.Context) {
 			existing.DeviceName = req.DeviceName
 		}
 		if err := services.UpdateDeviceByID(existing.ID, updates); err != nil {
-			utils.Internal(c, "更新设备失败")
+			utils.Internal(c, utils.T(c, "err.device.update_failed"))
 			return
 		}
 		existing.ClientKind = req.ClientKind
@@ -69,7 +69,7 @@ func (h *DeviceHandler) RegisterDevice(c *gin.Context) {
 	// 如果该用户还没有任何设备，则这台自动成为主机
 	count, err := services.CountDevicesByUser(userID)
 	if err != nil {
-		utils.Internal(c, "查询设备失败")
+		utils.Internal(c, utils.T(c, "err.device.query_failed"))
 		return
 	}
 	role := "slave"
@@ -87,7 +87,7 @@ func (h *DeviceHandler) RegisterDevice(c *gin.Context) {
 		LastActiveAt: now,
 	}
 	if err := services.InsertDevice(&device); err != nil {
-		utils.Internal(c, "注册设备失败")
+		utils.Internal(c, utils.T(c, "err.device.register_failed"))
 		return
 	}
 
@@ -113,7 +113,7 @@ func (h *DeviceHandler) ListDevices(c *gin.Context) {
 	// 同时返回同步设置
 	setting, err := services.FindSyncSettingByUser(userID)
 	if err != nil {
-		utils.Internal(c, "读取同步设置失败")
+		utils.Internal(c, utils.T(c, "err.sync.setting_read_failed"))
 		return
 	}
 
@@ -137,7 +137,7 @@ func (h *DeviceHandler) SetDeviceRole(c *gin.Context) {
 		Role string `json:"role" binding:"required"` // master / slave
 	}
 	if err := c.ShouldBindJSON(&req); err != nil || (req.Role != "master" && req.Role != "slave") {
-		utils.BadRequest(c, "role 必须是 master 或 slave")
+		utils.BadRequest(c, utils.T(c, "err.device.role_invalid"))
 		return
 	}
 
@@ -148,7 +148,7 @@ func (h *DeviceHandler) SetDeviceRole(c *gin.Context) {
 	// 验证设备属于该用户
 	target, err := services.FindDevice(userID, deviceID)
 	if err != nil || target == nil {
-		utils.NotFound(c, "设备不存在")
+		utils.NotFound(c, utils.T(c, "err.device.not_found"))
 		return
 	}
 
@@ -156,16 +156,16 @@ func (h *DeviceHandler) SetDeviceRole(c *gin.Context) {
 	if req.Role == "slave" && target.Role == "master" {
 		masterCount, err := services.CountDevicesByUserAndRole(userID, "master")
 		if err != nil {
-			utils.Internal(c, "查询设备失败")
+			utils.Internal(c, utils.T(c, "err.device.query_failed"))
 			return
 		}
 		totalCount, err := services.CountDevicesByUser(userID)
 		if err != nil {
-			utils.Internal(c, "查询设备失败")
+			utils.Internal(c, utils.T(c, "err.device.query_failed"))
 			return
 		}
 		if masterCount <= 1 && totalCount > 1 {
-			utils.BadRequest(c, "需要先指定其他设备为主机")
+			utils.BadRequest(c, utils.T(c, "err.device.master_demote_required"))
 			return
 		}
 	}
@@ -209,13 +209,13 @@ func (h *DeviceHandler) UpdateDeviceName(c *gin.Context) {
 		DeviceName string `json:"device_name" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, "参数错误")
+		utils.BadRequest(c, utils.T(c, "err.auth.param_error"))
 		return
 	}
 
 	target, err := services.FindDevice(userID, deviceID)
 	if err != nil || target == nil {
-		utils.NotFound(c, "设备不存在")
+		utils.NotFound(c, utils.T(c, "err.device.not_found"))
 		return
 	}
 
@@ -237,7 +237,7 @@ func (h *DeviceHandler) DeleteDevice(c *gin.Context) {
 
 	target, err := services.FindDevice(userID, deviceID)
 	if err != nil || target == nil {
-		utils.NotFound(c, "设备不存在")
+		utils.NotFound(c, utils.T(c, "err.device.not_found"))
 		return
 	}
 
@@ -245,11 +245,11 @@ func (h *DeviceHandler) DeleteDevice(c *gin.Context) {
 	if target.Role == "master" {
 		slaveCount, err := services.CountDevicesByUserAndRole(userID, "slave")
 		if err != nil {
-			utils.Internal(c, "查询设备失败")
+			utils.Internal(c, utils.T(c, "err.device.query_failed"))
 			return
 		}
 		if slaveCount > 0 {
-			utils.BadRequest(c, "请先切换其他设备为主机再删除当前主机")
+			utils.BadRequest(c, utils.T(c, "err.device.delete_master_first"))
 			return
 		}
 		// 只有一台设备时允许删除（会清空设备列表）
@@ -267,13 +267,13 @@ func (h *DeviceHandler) SetFullSync(c *gin.Context) {
 		Enabled bool `json:"enabled"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, "参数错误")
+		utils.BadRequest(c, utils.T(c, "err.auth.param_error"))
 		return
 	}
 
 	current, err := services.DefaultSyncPolicyService.Get(userID)
 	if err != nil {
-		utils.Internal(c, "读取同步设置失败")
+		utils.Internal(c, utils.T(c, "err.sync.setting_read_failed"))
 		return
 	}
 	updated, err := services.DefaultSyncPolicyService.Update(userID, models.SyncPolicyUpdate{
@@ -283,7 +283,7 @@ func (h *DeviceHandler) SetFullSync(c *gin.Context) {
 		ExpectedVersion:  current.Version,
 	})
 	if err != nil {
-		utils.Internal(c, "更新同步设置失败")
+		utils.Internal(c, utils.T(c, "err.sync.setting_update_failed"))
 		return
 	}
 	utils.Success(c, gin.H{"full_sync": req.Enabled, "policy": updated})

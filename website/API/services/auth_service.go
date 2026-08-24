@@ -13,21 +13,34 @@ import (
 
 type AuthService struct{}
 
+// 哨兵错误：service 层无 gin.Context，无法直接翻译，改为导出的哨兵变量，
+// handler 通过 errors.Is 判定后用 utils.T() 翻译为当前请求语言。
+var (
+	ErrAuthUserTaken            = errors.New("err.auth.register_taken")
+	ErrAuthBcryptFailed         = errors.New("err.auth.bcrypt_failed")
+	ErrAuthRegisterFailed       = errors.New("err.auth.register_failed")
+	ErrAuthWrongCredentials     = errors.New("err.auth.wrong_credentials")
+	ErrAuthAccountBanned        = errors.New("err.auth.account_banned")
+	ErrAuthGenerateTokenFailed  = errors.New("err.auth.generate_token_short")
+	ErrAuthUserNotFound         = errors.New("err.auth.user_not_found_short")
+	ErrAuthOldPasswordWrong     = errors.New("err.auth.old_password_wrong")
+)
+
 func (s *AuthService) Register(username, email, password string) (*models.User, error) {
 	db := database.Get()
 	users := db.Register("User")
 
 	var existing models.User
 	if users.FindOne(database.FilterEq("Username", username), &existing) {
-		return nil, errors.New("用户名或邮箱已被注册")
+		return nil, ErrAuthUserTaken
 	}
 	if email != "" && users.FindOne(database.FilterEq("Email", email), &existing) {
-		return nil, errors.New("用户名或邮箱已被注册")
+		return nil, ErrAuthUserTaken
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
-		return nil, errors.New("密码加密失败")
+		return nil, ErrAuthBcryptFailed
 	}
 
 	// 新人奖励：一次性给到账户余额（从 SystemConfig 读取，默认 1.00）
@@ -43,7 +56,7 @@ func (s *AuthService) Register(username, email, password string) (*models.User, 
 	}
 
 	if err := users.Insert(&user); err != nil {
-		return nil, errors.New("注册失败")
+		return nil, ErrAuthRegisterFailed
 	}
 
 	return &user, nil
@@ -56,20 +69,20 @@ func (s *AuthService) Login(username, password, ip string) (*models.User, string
 
 	var user models.User
 	if !users.FindOne(database.FilterEq("Username", username), &user) {
-		return nil, "", errors.New("用户名或密码错误")
+		return nil, "", ErrAuthWrongCredentials
 	}
 
 	if user.Status != 1 {
-		return nil, "", errors.New("账户已被禁用")
+		return nil, "", ErrAuthAccountBanned
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return nil, "", errors.New("用户名或密码错误")
+		return nil, "", ErrAuthWrongCredentials
 	}
 
 	token, err := utils.GenerateToken(user.ID, user.Role, user.TokenVersion)
 	if err != nil {
-		return nil, "", errors.New("生成token失败")
+		return nil, "", ErrAuthGenerateTokenFailed
 	}
 
 	now := time.Now()
@@ -86,16 +99,16 @@ func (s *AuthService) ChangePassword(userID uint, oldPassword, newPassword strin
 
 	var user models.User
 	if !users.FindByID(userID, &user) {
-		return errors.New("用户不存在")
+		return ErrAuthUserNotFound
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
-		return errors.New("原密码错误")
+		return ErrAuthOldPasswordWrong
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 12)
 	if err != nil {
-		return errors.New("密码加密失败")
+		return ErrAuthBcryptFailed
 	}
 
 	users.UpdateWhere(database.FilterEq("ID", userID), map[string]interface{}{
@@ -109,7 +122,7 @@ func (s *AuthService) ChangePassword(userID uint, oldPassword, newPassword strin
 func GetUserByID(userID uint) (*models.User, error) {
 	var user models.User
 	if !database.Get().Register("User").FindByID(userID, &user) {
-		return nil, errors.New("用户不存在")
+		return nil, ErrAuthUserNotFound
 	}
 	return &user, nil
 }

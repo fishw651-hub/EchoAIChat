@@ -130,13 +130,13 @@ func (h *SyncHandler) UploadTable(c *gin.Context) {
 			Tombstones []map[string]interface{} `json:"tombstones"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
-			utils.BadRequest(c, "参数错误")
+			utils.BadRequest(c, utils.T(c, "err.sync.param_error"))
 			return
 		}
 		deleted, err := h.processTombstones(userID, req.Tombstones)
 		if err != nil {
 			log.Printf("⚠️ 墓碑处理失败(user=%d): %v", userID, err)
-			utils.Internal(c, "同步写入失败，请重试")
+			utils.Internal(c, utils.T(c, "err.sync.write_failed"))
 			return
 		}
 		utils.Success(c, gin.H{"upserted": 0, "deleted": deleted})
@@ -144,7 +144,7 @@ func (h *SyncHandler) UploadTable(c *gin.Context) {
 	}
 
 	if !syncTableNames[table] {
-		utils.BadRequest(c, "无效的表名")
+		utils.BadRequest(c, utils.T(c, "err.sync.invalid_table"))
 		return
 	}
 
@@ -153,7 +153,7 @@ func (h *SyncHandler) UploadTable(c *gin.Context) {
 		Tombstones []map[string]interface{} `json:"tombstones"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, "参数错误")
+		utils.BadRequest(c, utils.T(c, "err.sync.param_error"))
 		return
 	}
 
@@ -168,14 +168,14 @@ func (h *SyncHandler) UploadTable(c *gin.Context) {
 	if err != nil {
 		// 部分失败必须返回错误让客户端保留本地队列并重试，否则静默丢数据
 		log.Printf("⚠️ 同步批量写入失败(user=%d table=%s, 已写入 %d/%d): %v", userID, table, upserted, len(req.Items), err)
-		utils.Internal(c, "同步写入失败，请重试")
+		utils.Internal(c, utils.T(c, "err.sync.write_failed"))
 		return
 	}
 
 	deleted, err := h.processTombstones(userID, req.Tombstones)
 	if err != nil {
 		log.Printf("⚠️ 墓碑处理失败(user=%d table=%s): %v", userID, table, err)
-		utils.Internal(c, "同步写入失败，请重试")
+		utils.Internal(c, utils.T(c, "err.sync.write_failed"))
 		return
 	}
 	utils.Success(c, gin.H{"upserted": upserted, "deleted": deleted})
@@ -194,7 +194,7 @@ func (h *SyncHandler) DownloadTable(c *gin.Context) {
 	}
 
 	if !syncTableNames[table] {
-		utils.BadRequest(c, "无效的表名")
+		utils.BadRequest(c, utils.T(c, "err.sync.invalid_table"))
 		return
 	}
 
@@ -214,7 +214,7 @@ func (h *SyncHandler) UploadAll(c *gin.Context) {
 		Tombstones []map[string]interface{} `json:"tombstones"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, "参数错误")
+		utils.BadRequest(c, utils.T(c, "err.sync.param_error"))
 		return
 	}
 	totalUpserted, totalDeleted := 0, 0
@@ -234,7 +234,7 @@ func (h *SyncHandler) UploadAll(c *gin.Context) {
 		if err != nil {
 			// 部分失败必须返回错误让客户端保留本地队列并重试，否则静默丢数据
 			log.Printf("⚠️ 同步全量批量写入失败(user=%d table=%s, 已写入 %d/%d): %v", userID, table, upserted, len(payload.Items), err)
-			utils.Internal(c, "同步写入失败，请重试")
+			utils.Internal(c, utils.T(c, "err.sync.write_failed"))
 			return
 		}
 		totalUpserted += upserted
@@ -243,7 +243,7 @@ func (h *SyncHandler) UploadAll(c *gin.Context) {
 	deleted, err := h.processTombstones(userID, allTombstones)
 	if err != nil {
 		log.Printf("⚠️ 全量同步墓碑处理失败(user=%d): %v", userID, err)
-		utils.Internal(c, "同步写入失败，请重试")
+		utils.Internal(c, utils.T(c, "err.sync.write_failed"))
 		return
 	}
 	totalDeleted = deleted
@@ -276,7 +276,7 @@ func (h *SyncHandler) ClearTombstones(c *gin.Context) {
 			services.SyncDeleteTombstoneByID(fid)
 		}
 	}
-	utils.SuccessMsg(c, "墓碑已清空")
+	utils.SuccessMsg(c, utils.T(c, "ok.sync.tombstones_cleared"))
 }
 
 // DELETE /api/v1/sync/cloud — 删除当前账号的云端同步副本，保留本地数据。
@@ -287,7 +287,7 @@ func (h *SyncHandler) DeleteCloudCopy(c *gin.Context) {
 		SelectedAgentIDs []string `json:"selected_agent_ids"`
 	}
 	if err := c.ShouldBindJSON(&request); err != nil {
-		utils.BadRequest(c, "鍙傛暟閿欒")
+		utils.BadRequest(c, utils.T(c, "err.sync.param_error"))
 		return
 	}
 
@@ -297,16 +297,16 @@ func (h *SyncHandler) DeleteCloudCopy(c *gin.Context) {
 		scope = services.NewAllSyncScope()
 	case "selected":
 		if len(request.SelectedAgentIDs) == 0 {
-			utils.BadRequest(c, "selected_agent_ids 涓嶈兘涓虹┖")
+			utils.BadRequest(c, utils.T(c, "err.sync.selected_ids_required"))
 			return
 		}
 		if len(request.SelectedAgentIDs) > 500 {
-			utils.BadRequest(c, "鍗曟鍒犻櫎鐨勬櫤鑳戒綋鏁伴噺杩囧")
+			utils.BadRequest(c, utils.T(c, "err.sync.too_many_agents"))
 			return
 		}
 		scope = services.NewSelectedSyncScope(request.SelectedAgentIDs)
 	default:
-		utils.BadRequest(c, "scope_mode 蹇呴』鏄?all 鎴?selected")
+		utils.BadRequest(c, utils.T(c, "err.sync.scope_mode_invalid"))
 		return
 	}
 

@@ -3,6 +3,8 @@ package middleware
 import (
 	"net/http"
 
+	"aichat-api/utils"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -11,7 +13,7 @@ func BodyLimit(maxBytes int64) gin.HandlerFunc {
 		if c.Request.ContentLength > maxBytes {
 			c.AbortWithStatusJSON(http.StatusRequestEntityTooLarge, gin.H{
 				"code":    http.StatusRequestEntityTooLarge,
-				"message": "请求体超过大小限制",
+				"message": utils.T(c, "err.body.too_large"),
 			})
 			return
 		}

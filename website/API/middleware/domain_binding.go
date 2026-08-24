@@ -1,13 +1,13 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"aichat-api/database"
 	"aichat-api/models"
+	"aichat-api/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -45,7 +45,7 @@ func DomainBinding(staticWhitelist func() []string) gin.HandlerFunc {
 		if hostname == "" {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 				"code":    -1,
-				"message": "无法解析请求域名",
+				"message": utils.T(c, "err.domain.unresolvable"),
 			})
 			return
 		}
@@ -64,7 +64,7 @@ func DomainBinding(staticWhitelist func() []string) gin.HandlerFunc {
 
 		var allowedDomains models.SystemConfig
 		if !db.Register("SystemConfig").FindOne(database.FilterEq("Key", "allowed_domains"), &allowedDomains) || allowedDomains.Value == "" {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"code": -1, "message": "域名绑定已开启但未配置白名单"})
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"code": -1, "message": utils.T(c, "err.domain.whitelist_empty")})
 			return
 		}
 
@@ -84,7 +84,7 @@ func DomainBinding(staticWhitelist func() []string) gin.HandlerFunc {
 		if !matched {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 				"code":    -1,
-				"message": fmt.Sprintf("域名 %s 不在白名单中", hostname),
+				"message": utils.TP(c, "err.domain.not_whitelisted", map[string]string{"host": hostname}),
 			})
 			return
 		}

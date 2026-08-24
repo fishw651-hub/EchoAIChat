@@ -133,7 +133,7 @@ func RateLimit() gin.HandlerFunc {
 
 		limiter := perIPLimiter.get(ip)
 		if !limiter.Allow() {
-			utils.Fail(c, utils.CodeTooManyReqs, "请求过于频繁，请稍后再试")
+			utils.Fail(c, utils.CodeTooManyReqs, utils.T(c, "err.ratelimit.too_many"))
 			c.Abort()
 			return
 		}
@@ -154,7 +154,7 @@ func LoginRateLimit() gin.HandlerFunc {
 		ip := realClientIP(c)
 		limiter := perIPLoginLimiter.get(ip)
 		if !limiter.Allow() {
-			utils.Fail(c, utils.CodeTooManyReqs, "登录尝试过于频繁，请稍后再试")
+			utils.Fail(c, utils.CodeTooManyReqs, utils.T(c, "err.ratelimit.login_too_many"))
 			c.Abort()
 			return
 		}

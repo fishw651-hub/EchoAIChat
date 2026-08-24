@@ -79,6 +79,9 @@ func main() {
 		log.Fatalf("配置可信代理失败: %v", err)
 	}
 	r.MaxMultipartMemory = 32 << 20
+	// i18n 必须最先注册：解析 ?lang / Accept-Language 并写入 c.Set("lang", ...)，
+	// 后续 Logger/CORS/限流/auth 的错误文案才能按当前语言翻译。
+	r.Use(middleware.I18nLang())
 	r.Use(middleware.Logger())
 	r.Use(gin.Recovery())
 	r.Use(middleware.CORS(config.AppConfig.CORS.AllowedOrigins))

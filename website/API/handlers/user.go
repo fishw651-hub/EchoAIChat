@@ -33,7 +33,7 @@ func (h *UserHandler) GetBalance(c *gin.Context) {
 
 	user, err := services.FindUserByID(userID)
 	if err != nil || user == nil {
-		utils.BadRequest(c, "用户不存在")
+		utils.BadRequest(c, utils.T(c, "err.auth.user_not_found_short"))
 		return
 	}
 

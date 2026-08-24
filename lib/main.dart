@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
@@ -96,8 +97,10 @@ void main() async {
     notificationInitFuture = Future.value();
   }
 
-  // 应用仅支持中文（英文模式已移除）
-  const initialLocale = Locale('zh');
+  // 从持久化偏好读取语言设置
+  final prefs = await SharedPreferences.getInstance();
+  final savedLocale = prefs.getString('locale') ?? 'zh';
+  final initialLocale = Locale(savedLocale);
 
   // Ensure DB migration finishes before providers need it
   try {
@@ -281,7 +284,7 @@ class AIApp extends ConsumerWidget {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales: const [Locale('zh')],
+        supportedLocales: const [Locale('zh'), Locale('en')],
         theme: AppTheme.oceanLight(),
         darkTheme: AppTheme.oceanDark(),
         themeMode: themeMode,

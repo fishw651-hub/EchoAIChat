@@ -132,7 +132,7 @@ type ChatRequest struct {
 func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 	var req ChatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, "参数错误: "+err.Error())
+		utils.BadRequest(c, utils.TP(c, "err.auth.param_error_detail", map[string]string{"detail": err.Error()}))
 		return
 	}
 
@@ -142,7 +142,7 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 		var ownershipErr error
 		ownedAgent, ownershipErr = services.RequireOwnedAgent(userID, req.ClientAgentID)
 		if ownershipErr != nil {
-			utils.Forbidden(c, "智能体不属于当前账号")
+			utils.Forbidden(c, utils.T(c, "err.chat.agent_not_owned"))
 			return
 		}
 	}
@@ -151,7 +151,7 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 		var claimErr error
 		proactiveClaim, claimErr = services.FindProactiveCareClaim(userID, req.ClientAgentID, req.ProactiveClaimToken)
 		if claimErr != nil {
-			utils.Forbidden(c, "主动关心 claim 无效")
+			utils.Forbidden(c, utils.T(c, "err.chat.proactive_claim_invalid"))
 			return
 		}
 	}
@@ -160,7 +160,7 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 		if proactiveClaim != nil {
 			_ = services.ReleaseProactiveCare(proactiveClaim.ClaimToken)
 		}
-		utils.FailWithData(c, utils.CodeBadRequest, fmt.Sprintf("当前订阅不支持模型 %s", req.Model), errData)
+		utils.FailWithData(c, utils.CodeBadRequest, utils.TP(c, "err.chat.model_not_allowed", map[string]string{"model": req.Model}), errData)
 		return
 	}
 
@@ -182,7 +182,7 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 			c.JSON(http.StatusPaymentRequired, gin.H{"code": http.StatusPaymentRequired, "message": billingErr.Error(), "data": billingErr.ToMap()})
 			return
 		}
-		utils.Internal(c, "计费预留失败")
+		utils.Internal(c, utils.T(c, "err.chat.reserve_failed"))
 		return
 	}
 	var featureReservation *models.FeatureQuotaReservation
@@ -195,7 +195,7 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 				c.JSON(http.StatusPaymentRequired, gin.H{"code": http.StatusPaymentRequired, "message": quotaErr.Error()})
 				return
 			}
-			utils.Internal(c, "真实回复配额预留失败")
+			utils.Internal(c, utils.T(c, "err.chat.real_reply_reserve_failed"))
 			return
 		}
 	}
@@ -245,7 +245,7 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 		if writeChatUpstreamError(c, err) {
 			return
 		}
-		utils.Internal(c, "上游请求失败")
+		utils.Internal(c, utils.T(c, "err.chat.upstream_failed"))
 		return
 	}
 
@@ -261,11 +261,11 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 		// Settle 失败时必须 Release，否则 reservation 永久 pending，用户配额永久被占用
 		_ = h.billingService.Release(reservation.ID)
 		releaseFeature()
-		utils.Internal(c, "计费结算失败")
+		utils.Internal(c, utils.T(c, "err.chat.settle_failed"))
 		return
 	}
 	if err := commitFeature(); err != nil {
-		utils.Internal(c, "真实回复配额提交失败")
+		utils.Internal(c, utils.T(c, "err.chat.real_reply_commit_failed"))
 		return
 	}
 
@@ -281,7 +281,7 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 func (h *ChatHandler) ChatCompletionsStream(c *gin.Context) {
 	var req ChatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.BadRequest(c, "参数错误: "+err.Error())
+		utils.BadRequest(c, utils.TP(c, "err.auth.param_error_detail", map[string]string{"detail": err.Error()}))
 		return
 	}
 
@@ -291,7 +291,7 @@ func (h *ChatHandler) ChatCompletionsStream(c *gin.Context) {
 		var ownershipErr error
 		ownedAgent, ownershipErr = services.RequireOwnedAgent(userID, req.ClientAgentID)
 		if ownershipErr != nil {
-			utils.Forbidden(c, "智能体不属于当前账号")
+			utils.Forbidden(c, utils.T(c, "err.chat.agent_not_owned"))
 			return
 		}
 	}
@@ -300,7 +300,7 @@ func (h *ChatHandler) ChatCompletionsStream(c *gin.Context) {
 		var claimErr error
 		proactiveClaim, claimErr = services.FindProactiveCareClaim(userID, req.ClientAgentID, req.ProactiveClaimToken)
 		if claimErr != nil {
-			utils.Forbidden(c, "主动关心 claim 无效")
+			utils.Forbidden(c, utils.T(c, "err.chat.proactive_claim_invalid"))
 			return
 		}
 	}
@@ -309,7 +309,7 @@ func (h *ChatHandler) ChatCompletionsStream(c *gin.Context) {
 		if proactiveClaim != nil {
 			_ = services.ReleaseProactiveCare(proactiveClaim.ClaimToken)
 		}
-		utils.FailWithData(c, utils.CodeBadRequest, fmt.Sprintf("当前订阅不支持模型 %s", req.Model), errData)
+		utils.FailWithData(c, utils.CodeBadRequest, utils.TP(c, "err.chat.model_not_allowed", map[string]string{"model": req.Model}), errData)
 		return
 	}
 
@@ -331,7 +331,7 @@ func (h *ChatHandler) ChatCompletionsStream(c *gin.Context) {
 			c.JSON(http.StatusPaymentRequired, gin.H{"code": http.StatusPaymentRequired, "message": billingErr.Error(), "data": billingErr.ToMap()})
 			return
 		}
-		utils.Internal(c, "计费预留失败")
+		utils.Internal(c, utils.T(c, "err.chat.reserve_failed"))
 		return
 	}
 	var featureReservation *models.FeatureQuotaReservation
@@ -344,7 +344,7 @@ func (h *ChatHandler) ChatCompletionsStream(c *gin.Context) {
 				c.JSON(http.StatusPaymentRequired, gin.H{"code": http.StatusPaymentRequired, "message": quotaErr.Error()})
 				return
 			}
-			utils.Internal(c, "真实回复配额预留失败")
+			utils.Internal(c, utils.T(c, "err.chat.real_reply_reserve_failed"))
 			return
 		}
 	}
@@ -396,13 +396,13 @@ func (h *ChatHandler) ChatCompletionsStream(c *gin.Context) {
 		if writeChatUpstreamError(c, err) {
 			return
 		}
-		utils.Internal(c, "上游请求失败")
+		utils.Internal(c, utils.T(c, "err.chat.upstream_failed"))
 		return
 	}
 	if result == nil {
 		_ = h.billingService.Release(reservation.ID)
 		releaseFeature()
-		utils.Internal(c, "上游返回空响应")
+		utils.Internal(c, utils.T(c, "err.chat.upstream_empty"))
 		return
 	}
 
@@ -417,12 +417,12 @@ func (h *ChatHandler) ChatCompletionsStream(c *gin.Context) {
 	if billingErr != nil {
 		_ = h.billingService.Release(reservation.ID)
 		releaseFeature()
-		utils.Internal(c, "计费结算失败")
+		utils.Internal(c, utils.T(c, "err.chat.settle_failed"))
 		return
 	}
 	if err := commitFeature(); err != nil {
 		releaseFeature()
-		utils.Internal(c, "真实回复配额提交失败")
+		utils.Internal(c, utils.T(c, "err.chat.real_reply_commit_failed"))
 		return
 	}
 

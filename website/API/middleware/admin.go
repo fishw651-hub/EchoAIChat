@@ -10,14 +10,14 @@ func AdminRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := c.Get("role")
 		if !exists {
-			utils.Unauthorized(c, "请先登录")
+			utils.Unauthorized(c, utils.T(c, "err.auth.login_required"))
 			c.Abort()
 			return
 		}
 
 		r := role.(string)
 		if r != "admin" && r != "super_admin" {
-			utils.Forbidden(c, "需要管理员权限")
+			utils.Forbidden(c, utils.T(c, "err.auth.admin_required"))
 			c.Abort()
 			return
 		}
@@ -30,13 +30,13 @@ func SuperAdminRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := c.Get("role")
 		if !exists {
-			utils.Unauthorized(c, "请先登录")
+			utils.Unauthorized(c, utils.T(c, "err.auth.login_required"))
 			c.Abort()
 			return
 		}
 
 		if role.(string) != "super_admin" {
-			utils.Forbidden(c, "需要超级管理员权限")
+			utils.Forbidden(c, utils.T(c, "err.auth.super_admin_required"))
 			c.Abort()
 			return
 		}

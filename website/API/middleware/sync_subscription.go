@@ -17,7 +17,7 @@ func RequireSyncSubscription() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := c.GetUint("user_id")
 		if !HasSyncSubscription(userID) {
-			utils.Forbidden(c, "多端同步仅订阅用户可用")
+			utils.Forbidden(c, utils.T(c, "err.sync.subscription_required"))
 			c.Abort()
 			return
 		}
