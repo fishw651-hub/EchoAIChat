@@ -1,0 +1,72 @@
+# 回响 Echo API 服务器配置模板
+# 使用前复制为 config.yaml 并替换所有占位值（jwt.secret 必须为 ≥32 字符随机强密钥）
+server:
+  port: 8080
+  mode: debug
+  server_url: "http://localhost:8080"
+  domain_whitelist:
+    - localhost
+    - 127.0.0.1
+
+database:
+  type: sqlite
+  dsn: ./data.db
+
+jwt:
+  # 必须替换为至少 32 字符的随机强密钥，否则服务拒绝启动。
+  # 生成示例：openssl rand -base64 48（或等效随机源）。占位值禁止用于任何环境。
+  secret: "CHANGE_ME_TO_A_RANDOM_32_PLUS_CHAR_SECRET"
+  expire_hours: 24
+
+encryption:
+  key: ""  # 留空则自动生成并写入 .encryption_key 文件，或用环境变量 ENCRYPTION_KEY
+
+ifdian:
+  user_id: ""
+  token: ""
+  client_id: ""
+  client_secret: ""
+
+easypay:
+  pid: ""
+  key: ""
+  sitename: "AIchat"
+
+deepseek:
+  base_url: "https://api.deepseek.com"
+
+upload:
+  max_size_mb: 5
+  allowed_types: ["jpg", "jpeg", "png", "gif", "webp"]
+
+# 源站 HTTPS。生产建议启用 Full (strict)，并使用 ACME 自动签发证书。
+# 自动签发使用 Let's Encrypt HTTP-01 / TLS-ALPN-01，要求域名 DNS 指向本机且公网 80/443 端口可达。
+tls:
+  enabled: false
+  port: 443
+  auto_acme: false
+  acme_email: ""
+  acme_domains: []
+  cache_dir: ./data/acme
+  # auto_acme=false 时填写：
+  # cert_file: ./certs/origin.crt
+  # key_file: ./certs/origin.key
+
+cors:
+  # 不要加 "*"：AllowCredentials 下通配会让任意站点跨源读 API 响应
+  allowed_origins:
+    - "http://localhost"
+    - "http://127.0.0.1"
+
+rate_limit:
+  global_rps: 1000
+  per_ip_rps: 60
+  login_per_min: 5
+
+network:
+  background_min_concurrency: 2
+  background_max_concurrency: 32
+  healthy_latency_ms: 800
+  overload_latency_ms: 3000
+  upstream_idle_conns: 32
+  upstream_max_conns_per_host: 64

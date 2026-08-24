@@ -1,0 +1,33 @@
+name: quality-gate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.1'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  go:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website/API
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache-dependency-path: website/API/go.sum
+      - run: go test -count=1 ./...
+      - run: go build ./...

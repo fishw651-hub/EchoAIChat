@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIchat 管理后台 - 登录</title>
+    <link rel="stylesheet" href="../static/css/common.css">
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+        }
+        .login-card {
+            background: #fff;
+            border-radius: var(--radius-lg);
+            box-shadow: 0 20px 60px rgba(0,0,0,.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-logo {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .login-logo .icon {
+            width: 56px; height: 56px;
+            background: var(--primary);
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center; justify-content: center;
+            font-size: 28px;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+        .login-logo h1 { font-size: 20px; font-weight: 700; color: var(--gray-800); }
+        .login-logo p { font-size: 13px; color: var(--gray-500); margin-top: 4px; }
+        .login-card .form-control { padding: 10px 14px; font-size: 15px; }
+        .login-card .btn { width: 100%; padding: 12px; font-size: 15px; margin-top: 8px; }
+        .error-msg { color: var(--danger); font-size: 13px; margin-top: 8px; text-align: center; display: none; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-logo">
+            <div class="icon">🧠</div>
+            <h1>AIchat 管理后台</h1>
+            <p>请使用管理员账户登录</p>
+        </div>
+        <form id="loginForm" onsubmit="return false;">
+            <div class="form-group">
+                <label class="form-label">用户名</label>
+                <input type="text" class="form-control" id="username" placeholder="请输入用户名" autocomplete="username" autofocus>
+            </div>
+            <div class="form-group">
+                <label class="form-label">密码</label>
+                <input type="password" class="form-control" id="password" placeholder="请输入密码" autocomplete="current-password">
+            </div>
+            <p class="error-msg" id="errorMsg"></p>
+            <button type="submit" class="btn btn-primary" id="loginBtn" onclick="handleLogin()">登 录</button>
+        </form>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        const BASE = '/api/v1';
+        if (localStorage.getItem('admin_token')) {
+            window.location.href = 'index.html';
+        }
+
+        function toast(msg, type) {
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = 'toast toast-' + type;
+            t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        async function handleLogin() {
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value;
+            const err = document.getElementById('errorMsg');
+            const btn = document.getElementById('loginBtn');
+
+            if (!u || !p) { err.style.display='block'; err.textContent='请输入用户名和密码'; return; }
+
+            btn.disabled = true;
+            btn.textContent = '登录中...';
+            err.style.display = 'none';
+
+            try {
+                const res = await fetch(BASE + '/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({username: u, password: p})
+                });
+                const data = await res.json();
+                if (data.code === 0) {
+                    if (data.data.role !== 'admin' && data.data.role !== 'super_admin') {
+                        err.style.display='block'; err.textContent='此账户没有管理员权限';
+                        btn.disabled = false; btn.textContent = '登 录';
+                        return;
+                    }
+                    localStorage.setItem('admin_token', data.data.token);
+                    localStorage.setItem('admin_name', data.data.nickname || data.data.username);
+                    localStorage.setItem('admin_role', data.data.role);
+                    toast('登录成功', 'success');
+                    setTimeout(() => window.location.href = 'index.html', 500);
+                } else {
+                    err.style.display='block'; err.textContent=data.message;
+                    btn.disabled = false; btn.textContent = '登 录';
+                }
+            } catch(e) {
+                err.style.display='block'; err.textContent='网络错误，请检查后端服务';
+                btn.disabled = false; btn.textContent = '登 录';
+            }
+        }
+
+        document.getElementById('password').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') handleLogin();
+        });
+    </script>
+</body>
+</html>

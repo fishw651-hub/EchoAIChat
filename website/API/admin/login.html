@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>回响运营控制台 - 登录</title>
+    <link rel="stylesheet" href="css/common.css">
+    <style>
+        body { min-height: 100vh; padding: 24px; display: grid; place-items: center; overflow-x: hidden; background: #102833; }
+        body::before, body::after { content: ''; position: fixed; border-radius: 999px; filter: blur(2px); pointer-events: none; }
+        body::before { width: 62vw; height: 62vw; left: -22vw; top: -35vw; background: radial-gradient(circle, rgba(215,131,108,.5), rgba(215,131,108,0) 68%); }
+        body::after { width: 68vw; height: 68vw; right: -30vw; bottom: -42vw; background: radial-gradient(circle, rgba(89,151,172,.52), rgba(89,151,172,0) 68%); }
+        .login-shell { position: relative; z-index: 1; width: min(980px, 100%); min-height: 570px; display: grid; grid-template-columns: 1.05fr .95fr; overflow: hidden; border: 1px solid rgba(221,238,244,.16); border-radius: 28px; box-shadow: 0 35px 90px rgba(3,19,27,.42); background: rgba(255,255,255,.08); backdrop-filter: blur(22px); }
+        .login-story { position: relative; padding: 54px; display: flex; flex-direction: column; justify-content: space-between; color: #eef7fa; overflow: hidden; background: linear-gradient(145deg, rgba(35,78,96,.78), rgba(17,48,62,.92)); }
+        .login-story::after { content: ''; position: absolute; inset: auto -20% 10% 16%; height: 180px; border: 2px solid rgba(175,214,226,.18); border-left-color: transparent; border-right-color: transparent; border-radius: 50%; transform: rotate(-12deg); box-shadow: 0 0 60px rgba(125,184,201,.12); }
+        .login-brand { display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 700; letter-spacing: .04em; }
+        .login-brand img { width: 42px; height: 42px; padding: 2px; border-radius: 13px; background: rgba(255,255,255,.82); }
+        .login-story-copy { position: relative; z-index: 1; max-width: 390px; }
+        .login-story-copy span { color: #9fc8d5; font-size: 11px; font-weight: 700; letter-spacing: .17em; text-transform: uppercase; }
+        .login-story h1 { margin-top: 12px; font-size: clamp(32px, 4vw, 47px); line-height: 1.14; letter-spacing: -.045em; }
+        .login-story p { margin-top: 18px; color: rgba(232,245,249,.68); font-size: 14px; line-height: 1.8; }
+        .login-story-foot { color: rgba(232,245,249,.45); font-size: 11px; }
+        .login-card { width: 100%; padding: 54px 48px; display: flex; flex-direction: column; justify-content: center; background: rgba(255,255,255,.96); }
+        .login-logo { margin-bottom: 32px; }
+        .login-logo h2 { font-size: 25px; font-weight: 750; color: var(--gray-900); letter-spacing: -.03em; }
+        .login-logo p { font-size: 13px; color: var(--gray-500); margin-top: 8px; }
+        .login-card .form-label { font-size: 13px; }
+        .login-card .form-control { min-height: 48px; padding: 11px 14px; font-size: 15px; }
+        .login-card .btn { width: 100%; min-height: 48px; margin-top: 12px; font-size: 14px; }
+        .error-msg { min-height: 20px; color: var(--danger); font-size: 12px; margin-top: 8px; display: none; }
+        .login-security { display: flex; align-items: center; gap: 7px; margin-top: 20px; color: var(--gray-400); font-size: 11px; }
+        .login-security svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+        @media (max-width: 760px) {
+            body { padding: 14px; background: linear-gradient(160deg, #173746, #102833); }
+            .login-shell { min-height: 0; grid-template-columns: 1fr; border-radius: 22px; }
+            .login-story { display: none; }
+            .login-card { padding: 40px 24px; }
+        }
+    </style>
+</head>
+<body>
+<main class="login-shell">
+    <section class="login-story" aria-label="回响品牌介绍">
+        <div class="login-brand"><img src="/landing/assets/favicon.png" alt="">回响</div>
+        <div class="login-story-copy"><span>Echo Operations</span><h1>让每一次回响<br>都清晰可见</h1><p>在安静、可靠的运营视图中管理用户、内容、订阅与服务状态。</p></div>
+        <p class="login-story-foot">仅限授权管理员访问</p>
+    </section>
+    <section class="login-card">
+        <div class="login-logo"><h2>欢迎回来</h2><p>登录回响运营控制台</p></div>
+        <form onsubmit="handleLogin(); return false;">
+            <div class="form-group"><label class="form-label" for="username">用户名</label><input type="text" class="form-control" id="username" placeholder="请输入管理员用户名" autocomplete="username" autofocus></div>
+            <div class="form-group"><label class="form-label" for="password">密码</label><input type="password" class="form-control" id="password" placeholder="请输入密码" autocomplete="current-password"></div>
+            <p class="error-msg" id="errorMsg" role="alert" aria-live="polite"></p>
+            <button type="submit" class="btn btn-primary" id="loginBtn">安全登录</button>
+        </form>
+        <p class="login-security"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-5"/></svg>登录凭证通过加密连接传输</p>
+    </section>
+</main>
+<div class="toast-container" id="toastContainer"></div>
+<script>
+const BASE = '/api/v1';
+// 仅检查 token 存在性，过期 token 会在首次 API 调用时被 401 踢回登录页
+if (localStorage.getItem('admin_token')) { window.location.href = '/admin/index.html'; }
+function toast(msg, type) {
+    const c = document.getElementById('toastContainer'), t = document.createElement('div');
+    t.className = 'toast toast-'+type; t.textContent = msg; c.appendChild(t); setTimeout(() => t.remove(), 3000);
+}
+async function handleLogin() {
+    const u = document.getElementById('username').value.trim(), p = document.getElementById('password').value;
+    const err = document.getElementById('errorMsg'), btn = document.getElementById('loginBtn');
+    if (!u || !p) { err.style.display='block'; err.textContent='请输入用户名和密码'; return; }
+    btn.disabled = true; btn.textContent = '登录中...'; err.style.display = 'none';
+    try {
+        const res = await fetch(BASE+'/auth/login', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+        const data = await res.json();
+        if (data.code === 0) {
+            if (data.data.role !== 'admin' && data.data.role !== 'super_admin') {
+                err.style.display='block'; err.textContent='此账户没有管理员权限'; btn.disabled = false; btn.textContent = '安全登录'; return;
+            }
+            localStorage.setItem('admin_token', data.data.token);
+            localStorage.setItem('admin_name', data.data.nickname || data.data.username);
+            localStorage.setItem('admin_role', data.data.role);
+            toast('登录成功', 'success');
+            setTimeout(() => window.location.href = '/admin/index.html', 500);
+        } else {
+            err.style.display='block'; err.textContent = data.message; btn.disabled = false; btn.textContent = '安全登录';
+        }
+    } catch(e) {
+        err.style.display='block'; err.textContent = '网络错误，请检查后端服务是否启动';
+        btn.disabled = false; btn.textContent = '安全登录';
+    }
+}
+</script>
+</body>
+</html>

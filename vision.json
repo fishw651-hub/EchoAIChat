@@ -1,0 +1,14 @@
+{
+    "version_code": 67,
+    "vision":{
+        "Software version": 3 ,
+        "Iteration version": 1 ,
+        "describe":{
+            "English": "Fixed a critical bug and added a group chat feature." ,
+            "Chinese": "识别微信聊天记录，优化人设提示词"
+        } ,
+        "importance" : false ,
+        "_comment": "重要性 true/false 如果为true则必须更新 false可以选择更新或者不更新",
+        "package":"https://github.com/fishw651-hub/EchoAIChat/releases/download/V3.1/app-release.apk"
+    }
+}

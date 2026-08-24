@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="/web/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="回响AI - 会记忆的AI聊天软件 Web 版">
+  <meta name="robots" content="noindex">
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="回响">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>回响</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* 加载动画样式 */
+    #flutter-loading {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      z-index: 9999;
+      transition: opacity 0.4s ease;
+    }
+    #flutter-loading.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .loading-logo {
+      font-size: 42px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 4px;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .loading-subtitle {
+      font-size: 14px;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 32px;
+    }
+    .loading-bar-container {
+      width: 220px;
+      height: 4px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .loading-bar {
+      height: 100%;
+      width: 0%;
+      background: #fff;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+    .loading-percent {
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+      margin-top: 10px;
+      font-variant-numeric: tabular-nums;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Flutter 加载动画（Web 端专用） -->
+  <div id="flutter-loading">
+    <div class="loading-logo">回响</div>
+    <div class="loading-subtitle">正在加载...</div>
+    <div class="loading-bar-container">
+      <div class="loading-bar" id="loading-bar"></div>
+    </div>
+    <div class="loading-percent" id="loading-percent">0%</div>
+  </div>
+
+  <script>
+    // 进度条模拟动画
+    (function() {
+      var bar = document.getElementById('loading-bar');
+      var pct = document.getElementById('loading-percent');
+      var progress = 0;
+      var interval = setInterval(function() {
+        // 缓慢增长到 90%，等 Flutter 真正加载完才到 100%
+        if (progress < 90) {
+          progress += Math.random() * 8 + 2;
+          if (progress > 90) progress = 90;
+          bar.style.width = progress + '%';
+          pct.textContent = Math.round(progress) + '%';
+        }
+      }, 250);
+
+      // 监听 Flutter 渲染完成（flt-glass-pane 出现），隐藏加载动画
+      var observer = new MutationObserver(function() {
+        if (document.querySelector('flt-glass-pane')) {
+          // Flutter 已渲染，跳到 100%
+          progress = 100;
+          bar.style.width = '100%';
+          pct.textContent = '100%';
+          clearInterval(interval);
+
+          // 延迟 200ms 让进度条到达 100%，然后淡出
+          setTimeout(function() {
+            var loading = document.getElementById('flutter-loading');
+            if (loading) {
+              loading.classList.add('fade-out');
+              setTimeout(function() { loading.remove(); }, 400);
+            }
+          }, 200);
+
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      // 超时保底：15 秒后强制隐藏（防止 MutationObserver 失败）
+      setTimeout(function() {
+        clearInterval(interval);
+        var loading = document.getElementById('flutter-loading');
+        if (loading) {
+          loading.classList.add('fade-out');
+          setTimeout(function() { loading.remove(); }, 400);
+        }
+      }, 15000);
+    })();
+  </script>
+
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

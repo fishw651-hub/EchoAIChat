@@ -1,0 +1,16 @@
+Syslog                  yes
+UMask                   002
+Canonicalization        relaxed/simple
+Mode                    sv
+SubDomains              no
+AutoRestart             yes
+AutoRestartRate         10/1h
+Background              yes
+DNSTimeout              5
+SignatureAlgorithm      rsa-sha256
+Socket                  inet:8891@127.0.0.1
+PidFile                 /run/opendkim/opendkim.pid
+UserID                  opendkim
+KeyTable                /etc/opendkim/KeyTable
+SigningTable            refile:/etc/opendkim/SigningTable
+TrustedHosts            /etc/opendkim/TrustedHosts

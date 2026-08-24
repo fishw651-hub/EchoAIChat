@@ -1,0 +1,17 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /landing/
+Allow: /sitemap.xml
+Disallow: /admin/
+Disallow: /admin
+Disallow: /api/v1/admin/
+Disallow: /api/v1/admin
+Disallow: /api/v1/auth/
+Disallow: /api/v1/chat/
+Disallow: /api/v1/user/
+Disallow: /api/v1/sync
+Disallow: /api/v1/device
+Disallow: /api/v1/payment/
+
+# 站点地图
+Sitemap: https://example.com/sitemap.xml

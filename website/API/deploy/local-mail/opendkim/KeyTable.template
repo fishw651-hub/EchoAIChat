@@ -1,0 +1,1 @@
+__DKIM_SELECTOR__._domainkey.__MAIL_DOMAIN__ __MAIL_DOMAIN__:__DKIM_SELECTOR__:/etc/opendkim/keys/__MAIL_DOMAIN__/__DKIM_SELECTOR__.private

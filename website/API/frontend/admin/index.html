@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<!-- 已弃用：请使用 /admin/ 目录下的最新版本 -->
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIchat 管理后台</title>
+    <link rel="stylesheet" href="../static/css/common.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <button class="mobile-toggle" id="mobileToggle" title="菜单">☰</button>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <span class="brand-icon">🧠</span>
+            AIchat
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" data-section="dashboard" class="active"><span class="nav-icon">📊</span> 仪表盘</a>
+            <a href="#" data-section="users"><span class="nav-icon">👥</span> 用户管理</a>
+            <a href="#" data-section="agents"><span class="nav-icon">🤖</span> 智能体管理</a>
+            <a href="#" data-section="apikeys"><span class="nav-icon">🔑</span> API密钥</a>
+            <a href="#" data-section="models"><span class="nav-icon">💰</span> 模型定价</a>
+            <a href="#" data-section="plans"><span class="nav-icon">📦</span> 订阅计划</a>
+            <a href="#" data-section="config"><span class="nav-icon">⚙️</span> 系统配置</a>
+            <a href="#" data-section="orders"><span class="nav-icon">📋</span> 订单管理</a>
+        </nav>
+    </aside>
+
+    <!-- 顶部栏 -->
+    <div class="topbar">
+        <span class="topbar-title" id="topbarTitle">仪表盘</span>
+        <div class="topbar-right">
+            <span class="topbar-user"><span class="topbar-status"></span> <span id="adminName">Admin</span></span>
+            <button class="btn btn-sm btn-secondary btn-logout" id="btnLogout">退出</button>
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-area">
+        <div class="content">
+
+            <!-- ========== 仪表盘 ========== -->
+            <section class="section-panel active" id="section-dashboard">
+                <div id="dashboardContent"><p class="loading"><span class="spinner"></span> 加载中...</p></div>
+            </section>
+
+            <!-- ========== 用户管理 ========== -->
+            <section class="section-panel" id="section-users">
+                <div class="toolbar">
+                    <div class="toolbar-left">
+                        <div class="search-box">
+                            <input type="text" id="userSearch" placeholder="搜索用户名/邮箱/昵称..." onkeydown="if(event.key==='Enter')searchUsers()">
+                            <button class="btn btn-primary btn-sm" onclick="searchUsers()" style="border-radius:0 var(--radius) var(--radius) 0;">搜索</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>ID</th><th>用户名</th><th>昵称</th><th>邮箱</th><th>余额</th><th>角色</th><th>状态</th><th>操作</th></tr></thead>
+                        <tbody id="userTableBody"></tbody>
+                    </table>
+                    <div class="pagination" id="userPagination"></div>
+                </div>
+            </section>
+
+            <!-- ========== 智能体管理 ========== -->
+            <section class="section-panel" id="section-agents">
+                <div class="toolbar">
+                    <div class="toolbar-left"></div>
+                    <div class="toolbar-right"><button class="btn btn-primary btn-sm" onclick="showAddAgent()">+ 新增智能体</button></div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>ID</th><th>名称</th><th>模型</th><th>可见性</th><th>类型</th><th>下载量</th><th>操作</th></tr></thead>
+                        <tbody id="agentTableBody"></tbody>
+                    </table>
+                    <div class="pagination" id="agentPagination"></div>
+                </div>
+            </section>
+
+            <!-- ========== API密钥 ========== -->
+            <section class="section-panel" id="section-apikeys">
+                <div class="toolbar">
+                    <div class="toolbar-left"></div>
+                    <div class="toolbar-right"><button class="btn btn-primary btn-sm" onclick="showAddApiKey()">+ 添加密钥</button></div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>ID</th><th>供应商</th><th>名称</th><th>密钥</th><th>状态</th><th>操作</th></tr></thead>
+                        <tbody id="apikeyTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ========== 模型定价 ========== -->
+            <section class="section-panel" id="section-models">
+                <div class="toolbar">
+                    <div class="toolbar-left"></div>
+                    <div class="toolbar-right">
+                        <button class="btn btn-warning btn-sm" onclick="syncModels()">🔄 从DeepSeek同步模型</button>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>ID</th><th>模型</th><th>输入价格</th><th>缓存命中价</th><th>输出价格</th><th>状态</th><th>操作</th></tr></thead>
+                        <tbody id="modelTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ========== 订阅计划 ========== -->
+            <section class="section-panel" id="section-plans">
+                <div class="toolbar">
+                    <div class="toolbar-left"></div>
+                    <div class="toolbar-right"><button class="btn btn-primary btn-sm" onclick="showAddPlan()">+ 新增计划</button></div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>ID</th><th>名称</th><th>价格</th><th>每日配额</th><th>有效期</th><th>状态</th><th>操作</th></tr></thead>
+                        <tbody id="planTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ========== 系统配置 ========== -->
+            <section class="section-panel" id="section-config">
+                <div class="toolbar">
+                    <div class="toolbar-left"></div>
+                    <div class="toolbar-right"><button class="btn btn-primary btn-sm" onclick="showAddConfig()">+ 新增配置</button></div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>键</th><th>值</th><th>操作</th></tr></thead>
+                        <tbody id="configTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ========== 订单管理 ========== -->
+            <section class="section-panel" id="section-orders">
+                <div class="toolbar">
+                    <div class="toolbar-left">
+                        <select id="orderStatus" class="form-control" style="width:150px" onchange="filterOrders()">
+                            <option value="">全部状态</option>
+                            <option value="pending">待支付</option>
+                            <option value="paid">已支付</option>
+                            <option value="failed">已失败</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>订单号</th><th>用户</th><th>类型</th><th>计划</th><th>金额</th><th>实付</th><th>状态</th><th>支付方式</th><th>时间</th></tr></thead>
+                        <tbody id="orderTableBody"></tbody>
+                    </table>
+                    <div class="pagination" id="orderPagination"></div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <!-- ========== 模态框：编辑用户 ========== -->
+    <div class="modal-mask" id="modalEditUser" style="display:none">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">编辑用户 - <span id="editUserUname"></span></span>
+                <span class="modal-close" onclick="hideModal('modalEditUser')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editUserId">
+                <div class="form-group"><label class="form-label">状态</label><select class="form-control" id="editUserStatus"><option value="1">正常</option><option value="0">禁用</option></select></div>
+                <div class="form-group"><label class="form-label">角色</label><select class="form-control" id="editUserRole"><option value="user">用户</option><option value="admin">管理员</option><option value="super_admin">超级管理员</option></select></div>
+                <div class="form-group"><label class="form-label">余额（元）</label><input type="number" class="form-control" id="editUserBalance" step="0.01"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" onclick="hideModal('modalEditUser')">取消</button>
+                <button class="btn btn-primary btn-sm" onclick="saveUser()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 模态框：智能体 ========== -->
+    <div class="modal-mask" id="modalAgent" style="display:none">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <span class="modal-title" id="modalAgentTitle">新增智能体</span>
+                <span class="modal-close" onclick="hideModal('modalAgent')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="agentId">
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">名称 *</label><input class="form-control" id="agentName"></div>
+                    <div class="form-group"><label class="form-label">模型</label><input class="form-control" id="agentModel" placeholder="deepseek-v4-flash"></div>
+                </div>
+                <div class="form-group"><label class="form-label">描述</label><textarea class="form-control" id="agentDesc" rows="2"></textarea></div>
+                <div class="form-group"><label class="form-label">头像URL</label><input class="form-control" id="agentAvatar"></div>
+                <div class="form-group"><label class="form-label">系统提示词 *</label><textarea class="form-control" id="agentPrompt" rows="6"></textarea></div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">温度</label><input type="number" class="form-control" id="agentTemp" step="0.1" min="0" max="2"></div>
+                    <div class="form-group"><label class="form-label">最大Token</label><input type="number" class="form-control" id="agentMaxTokens"></div>
+                    <div class="form-group"><label class="form-label">推理强度</label><select class="form-control" id="agentReasoning"><option value="high">high</option><option value="max">max</option></select></div>
+                </div>
+                <div class="form-row" style="grid-template-columns:1fr 1fr 1fr 1fr">
+                    <div class="form-group"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="agentThinking"> 思考模式</label></div>
+                    <div class="form-group"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="agentPublic" checked> 公开</label></div>
+                    <div class="form-group"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="agentOfficial"> 官方</label></div>
+                    <div class="form-group"><label class="form-label">排序</label><input type="number" class="form-control" id="agentSort" value="0"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" onclick="hideModal('modalAgent')">取消</button>
+                <button class="btn btn-primary btn-sm" onclick="saveAgent()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 模态框：API密钥 ========== -->
+    <div class="modal-mask" id="modalApikey" style="display:none">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title" id="modalApikeyTitle">添加API密钥</span>
+                <span class="modal-close" onclick="hideModal('modalApikey')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="apikeyId">
+                <div class="form-group"><label class="form-label">供应商</label><select class="form-control" id="apikeyProvider"><option value="deepseek">DeepSeek</option></select></div>
+                <div class="form-group"><label class="form-label">标识名称 *</label><input class="form-control" id="apikeyName" placeholder="如：主Key"></div>
+                <div class="form-group"><label class="form-label">API Key</label><input class="form-control" id="apikeyKey" placeholder="sk-..." type="text"><div class="form-hint">编辑时留空则不更新密钥</div></div>
+                <div class="form-group"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="apikeyActive" checked> 启用</label></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" onclick="hideModal('modalApikey')">取消</button>
+                <button class="btn btn-primary btn-sm" onclick="saveApiKey()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 模态框：编辑价格 ========== -->
+    <div class="modal-mask" id="modalPrice" style="display:none">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">编辑定价 - <span id="priceModelId"></span></span>
+                <span class="modal-close" onclick="hideModal('modalPrice')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="priceId">
+                <div class="form-group"><label class="form-label">输入价格（每百万token）</label><input type="number" class="form-control" id="priceInput" step="0.000001"></div>
+                <div class="form-group"><label class="form-label">缓存命中价格（每百万token）</label><input type="number" class="form-control" id="priceCache" step="0.000001"></div>
+                <div class="form-group"><label class="form-label">输出价格（每百万token）</label><input type="number" class="form-control" id="priceOutput" step="0.000001"></div>
+                <div class="form-group"><label class="form-label">状态</label><select class="form-control" id="priceStatus"><option value="1">启用</option><option value="0">停用</option></select></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" onclick="hideModal('modalPrice')">取消</button>
+                <button class="btn btn-primary btn-sm" onclick="savePrice()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 模态框：订阅计划 ========== -->
+    <div class="modal-mask" id="modalPlan" style="display:none">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title" id="modalPlanTitle">新增订阅计划</span>
+                <span class="modal-close" onclick="hideModal('modalPlan')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="planId">
+                <div class="form-group"><label class="form-label">名称 *</label><input class="form-control" id="planName"></div>
+                <div class="form-group"><label class="form-label">描述</label><textarea class="form-control" id="planDesc" rows="2"></textarea></div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">价格（元） *</label><input type="number" class="form-control" id="planPrice" step="0.01"></div>
+                    <div class="form-group"><label class="form-label">每日配额（元）</label><input type="number" class="form-control" id="planQuota" step="0.01"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">有效期（天）</label><input type="number" class="form-control" id="planDays"></div>
+                    <div class="form-group"><label class="form-label">排序</label><input type="number" class="form-control" id="planSort"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" onclick="hideModal('modalPlan')">取消</button>
+                <button class="btn btn-primary btn-sm" onclick="savePlan()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 模态框：系统配置 ========== -->
+    <div class="modal-mask" id="modalConfig" style="display:none">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">编辑配置</span>
+                <span class="modal-close" onclick="hideModal('modalConfig')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">键</label><input class="form-control" id="configKey"></div>
+                <div class="form-group"><label class="form-label">值</label><textarea class="form-control" id="configValue" rows="3"></textarea></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" onclick="hideModal('modalConfig')">取消</button>
+                <button class="btn btn-primary btn-sm" onclick="saveConfig()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

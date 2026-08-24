@@ -1,0 +1,20 @@
+/// 服务器配置模板
+/// 使用前请复制为 server_config.dart 并填入真实服务器地址
+class ServerConfig {
+  ServerConfig._();
+
+  /// 中继站基础地址 (替换为你的服务器 IP 和端口)
+  static const String baseUrl = 'http://YOUR_SERVER_IP:8080';
+
+  /// 上传文件访问前缀
+  static String get uploadsUrl => '$baseUrl/uploads';
+
+  /// Chat Completions 端点（中继站）
+  static String get chatCompletionsUrl => '$baseUrl/api/v1/chat/completions';
+
+  /// 模型列表
+  static String get modelsUrl => '$baseUrl/api/v1/models';
+
+  /// 余额查询
+  static String get balanceUrl => '$baseUrl/api/v1/user/balance';
+}

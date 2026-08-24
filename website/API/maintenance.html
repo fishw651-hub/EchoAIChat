@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>站点更新维护中｜回响</title>
+    <style>
+        :root {
+            --bg: #f4f8fa; --surface: #ffffff; --ink: #17323f; --ink-soft: #4f6874;
+            --ink-muted: #7e949e; --line: #d9e5e9; --primary: #557c95; --primary-deep: #345e76;
+            --primary-wash: #e1edf2;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px;
+            color: var(--ink); background:
+                radial-gradient(circle at 68% 28%, rgba(174, 210, 220, .36), transparent 32%),
+                var(--bg);
+            font-family: Inter, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+            line-height: 1.65; -webkit-font-smoothing: antialiased;
+        }
+        .card {
+            max-width: 460px; width: 100%; text-align: center;
+            background: var(--surface); border: 1px solid var(--line); border-radius: 24px;
+            padding: 48px 36px 40px; box-shadow: 0 22px 58px rgba(23, 50, 63, .08);
+        }
+        .badge {
+            width: 72px; height: 72px; margin: 0 auto 24px; display: grid; place-items: center;
+            background: var(--primary-wash); border-radius: 22px; font-size: 34px;
+        }
+        h1 { margin: 0 0 12px; font-size: 24px; font-weight: 700; letter-spacing: .02em; }
+        p { margin: 0 0 8px; color: var(--ink-soft); font-size: 15px; }
+        .muted { color: var(--ink-muted); font-size: 13px; }
+        .brand {
+            display: inline-block; margin-top: 28px; padding: 6px 16px; border-radius: 999px;
+            background: var(--primary); color: #fff; font-size: 13px; font-weight: 600;
+            letter-spacing: .06em;
+        }
+    </style>
+</head>
+<body>
+    <main class="card">
+        <div class="badge">🛠️</div>
+        <h1>站点更新维护中</h1>
+        <p>我们正在进行站点更新维护，请稍后再来。</p>
+        <p class="muted">维护期间已登录的客户端与 API 服务不受影响。</p>
+        <span class="brand">回响</span>
+    </main>
+</body>
+</html>

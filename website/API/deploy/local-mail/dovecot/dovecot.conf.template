@@ -1,0 +1,26 @@
+disable_plaintext_auth = yes
+mail_location = maildir:/var/vmail/%d/%n/Maildir
+mail_home = /var/vmail/%d/%n
+auth_mechanisms = plain login
+
+passdb {
+  driver = passwd-file
+  args = scheme=SHA512-CRYPT username_format=%u /etc/dovecot/users
+}
+
+userdb {
+  driver = static
+  args = uid=__VMAIL_UID__ gid=__VMAIL_GID__ home=/var/vmail/%d/%n
+}
+
+service auth {
+  unix_listener /var/spool/postfix/private/auth {
+    mode = 0660
+    user = postfix
+    group = postfix
+  }
+}
+
+ssl = required
+ssl_cert = <__TLS_CERT__
+ssl_key = <__TLS_KEY__

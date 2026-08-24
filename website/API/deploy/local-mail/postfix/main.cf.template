@@ -1,0 +1,40 @@
+myhostname = __MAIL_HOST__
+mydomain = __MAIL_DOMAIN__
+myorigin = $mydomain
+inet_interfaces = all
+inet_protocols = all
+
+mydestination = localhost
+relay_domains =
+home_mailbox = Maildir/
+
+smtpd_banner = $myhostname ESMTP AIchat Mail
+biff = no
+append_dot_mydomain = no
+readme_directory = no
+compatibility_level = 3.6
+
+smtpd_tls_cert_file = __TLS_CERT__
+smtpd_tls_key_file = __TLS_KEY__
+smtpd_tls_security_level = may
+smtpd_tls_auth_only = yes
+smtpd_tls_loglevel = 1
+smtpd_tls_received_header = yes
+
+smtp_tls_security_level = dane
+smtp_tls_loglevel = 1
+
+smtpd_relay_restrictions = permit_mynetworks, permit_sasl_authenticated, defer_unauth_destination
+smtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination
+
+smtpd_sasl_auth_enable = yes
+smtpd_sasl_type = dovecot
+smtpd_sasl_path = private/auth
+smtpd_sasl_security_options = noanonymous
+smtpd_sasl_local_domain = $myhostname
+broken_sasl_auth_clients = yes
+
+milter_default_action = accept
+milter_protocol = 6
+smtpd_milters = inet:127.0.0.1:8891
+non_smtpd_milters = $smtpd_milters
