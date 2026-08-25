@@ -23,10 +23,22 @@ void main() {
       ),
     );
 
+    final addIcon = tester.widget<Icon>(find.byIcon(Icons.add_rounded));
+    expect(addIcon.size, 32);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is Material && widget.shape is CircleBorder,
+      ),
+      findsNothing,
+    );
+
     await tester.tap(find.byKey(const Key('home-create-button')));
     await tester.pump();
 
-    expect(find.byKey(const Key('create-menu-enter-animation')), findsOneWidget);
+    expect(
+      find.byKey(const Key('create-menu-enter-animation')),
+      findsOneWidget,
+    );
     expect(
       tester.widget(find.byKey(const Key('create-menu-enter-animation'))),
       isA<SlideTransition>(),

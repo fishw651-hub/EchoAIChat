@@ -15,6 +15,18 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
+    repositories {
+        // 优先使用国内镜像
+        maven {
+            url = uri("https://maven.aliyun.com/repository/gradle-plugin")
+        }
+        maven {
+            url = uri("https://maven.aliyun.com/repository/public")
+        }
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
 }
 
 plugins {
@@ -24,3 +36,4 @@ plugins {
 }
 
 include(":app")
+

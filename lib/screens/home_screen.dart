@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -17,6 +19,7 @@ import 'agent_create_screen.dart';
 import 'group_create_screen.dart';
 import 'home_tab_screen.dart';
 import 'network_content_tab.dart';
+import 'liquid_glass_bottom_nav_bar.dart';
 
 /// 移动端 PageView 6 页 → 底部导航 4 tab 的映射。
 ///
@@ -236,7 +239,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
     final tabTitles = _tabTitles(l10n, ref.watch(agentTabSubPageProvider));
-    final isDark = scheme.brightness == Brightness.dark;
     // 智能体列表多选时隐藏浮动子页分段控件，避免遮挡多选底栏操作键
     final contactSelecting = ref.watch(contactSelectionModeProvider);
     final showSubTabBar =
@@ -289,138 +291,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(
-            AppTheme.space4,
-            AppTheme.space1,
-            AppTheme.space4,
-            AppTheme.space3,
+      bottomNavigationBar: LiquidGlassBottomNavBar(
+        scheme: scheme,
+        currentIndex: _currentIndex,
+        tabBuilder: (index, selected) => _MobileTabDestination(
+          label: tabTitles[index],
+          selected: selected,
+          icon: _tabIcon(index, false),
+          selectedIcon: _tabIcon(index, true),
+          onTap: () => _switchTo(index),
+        ),
+        centerAction: MobileCreateAction(
+          onCreateAgent: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AgentCreateScreen()),
           ),
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: scheme.surface.withValues(alpha: isDark ? 0.92 : 0.94),
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(
-              color: isDark
-                  ? scheme.outlineVariant.withValues(alpha: 0.65)
-                  : scheme.outlineVariant.withValues(alpha: 0.5),
-              width: 0.5,
-            ),
-            // 3D 立体感：浅色多层柔和投影；深色减弱阴影、靠边框与微光分层
-            boxShadow: isDark
-                ? [
-                    BoxShadow(
-                      color: scheme.shadow.withValues(alpha: 0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : [
-                    BoxShadow(
-                      color: scheme.shadow.withValues(alpha: 0.16),
-                      blurRadius: 24,
-                      offset: const Offset(0, 10),
-                    ),
-                    BoxShadow(
-                      color: scheme.primary.withValues(alpha: 0.08),
-                      blurRadius: 40,
-                      offset: const Offset(0, 16),
-                    ),
-                    BoxShadow(
-                      color: scheme.shadow.withValues(alpha: 0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-          ),
-          child: Stack(
-            children: [
-              SizedBox(
-                height: 76,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _MobileTabDestination(
-                        label: tabTitles[0],
-                        selected: _currentIndex == 0,
-                        icon: _tabIcon(0, false),
-                        selectedIcon: _tabIcon(0, true),
-                        onTap: () => _switchTo(0),
-                      ),
-                    ),
-                    Expanded(
-                      child: _MobileTabDestination(
-                        label: tabTitles[1],
-                        selected: _currentIndex == 1,
-                        icon: _tabIcon(1, false),
-                        selectedIcon: _tabIcon(1, true),
-                        onTap: () => _switchTo(1),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 64,
-                      child: Center(
-                        child: MobileCreateAction(
-                          onCreateAgent: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const AgentCreateScreen(),
-                            ),
-                          ),
-                          onCreateGroup: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const GroupCreateScreen(),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: _MobileTabDestination(
-                        label: tabTitles[2],
-                        selected: _currentIndex == 2,
-                        icon: _tabIcon(2, false),
-                        selectedIcon: _tabIcon(2, true),
-                        onTap: () => _switchTo(2),
-                      ),
-                    ),
-                    Expanded(
-                      child: _MobileTabDestination(
-                        label: tabTitles[3],
-                        selected: _currentIndex == 3,
-                        icon: _tabIcon(3, false),
-                        selectedIcon: _tabIcon(3, true),
-                        onTap: () => _switchTo(3),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // 顶部 1px 高亮边，强化浮层立体感
-              Positioned(
-                top: 0,
-                left: 28,
-                right: 28,
-                height: 1,
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          scheme.surfaceTint.withValues(alpha: 0),
-                          (isDark ? scheme.surfaceTint : scheme.onSurface)
-                              .withValues(alpha: isDark ? 0.2 : 0.08),
-                          scheme.surfaceTint.withValues(alpha: 0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          onCreateGroup: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const GroupCreateScreen()),
           ),
         ),
       ),
@@ -624,6 +512,7 @@ class _MobileTabDestination extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final disableAnimations = MediaQuery.disableAnimationsOf(context);
     return Semantics(
       button: true,
       selected: selected,
@@ -637,12 +526,31 @@ class _MobileTabDestination extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                IconTheme(
-                  data: IconThemeData(
-                    color: selected ? scheme.primary : scheme.onSurfaceVariant,
-                    size: 26,
+                TweenAnimationBuilder<double>(
+                  tween: Tween<double>(
+                    begin: selected ? 0 : 1,
+                    end: selected ? 1 : 0,
                   ),
+                  duration: disableAnimations
+                      ? Duration.zero
+                      : const Duration(milliseconds: 190),
+                  curve: Curves.easeOutCubic,
                   child: selected ? selectedIcon : icon,
+                  builder: (context, progress, child) {
+                    final color = Color.lerp(
+                      scheme.onSurfaceVariant,
+                      scheme.primary,
+                      progress,
+                    );
+                    final scale = 1 + 0.06 * math.sin(math.pi * progress);
+                    return Transform.scale(
+                      scale: scale,
+                      child: IconTheme(
+                        data: IconThemeData(color: color, size: 26),
+                        child: child!,
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 3),
                 Text(
@@ -758,20 +666,23 @@ class _MobileCreateActionState extends State<MobileCreateAction>
         child: Tooltip(
           message: '新建',
           child: Material(
-            color: scheme.primary,
-            shape: const CircleBorder(),
-            elevation: 4,
+            type: MaterialType.transparency,
             child: InkWell(
               key: const Key('home-create-button'),
-              customBorder: const CircleBorder(),
+              borderRadius: BorderRadius.circular(18),
+              overlayColor: WidgetStatePropertyAll(
+                scheme.onSurface.withValues(alpha: 0.10),
+              ),
               onTap: _toggleMenu,
               child: SizedBox(
                 width: 56,
                 height: 56,
-                child: Icon(
-                  Icons.add_rounded,
-                  color: scheme.onPrimary,
-                  size: 30,
+                child: Center(
+                  child: Icon(
+                    Icons.add_rounded,
+                    color: scheme.onSurface,
+                    size: 32,
+                  ),
                 ),
               ),
             ),
@@ -855,11 +766,7 @@ class _CreateMenuItem extends StatelessWidget {
                     color: scheme.primaryContainer,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(
-                    icon,
-                    color: scheme.onPrimaryContainer,
-                    size: 23,
-                  ),
+                  child: Icon(icon, color: scheme.onPrimaryContainer, size: 23),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

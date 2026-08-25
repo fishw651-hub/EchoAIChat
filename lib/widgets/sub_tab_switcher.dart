@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_theme.dart';
+import 'liquid_glass_surface.dart';
 
 /// 两选项胶囊分段控件（等宽）。
 ///
-/// 选中项为 primary 色圆角滑块（[secondSelected] 变化时滑块 250ms 平移），
-/// 未选中项透明；文字/图标颜色随选中态渐变。
+/// 选中项为透明液态玻璃滑块（[secondSelected] 变化时滑块 250ms 平移），
+/// 未选中项保持透明；文字/图标颜色随选中态渐变。
 /// 移动端浮于底部悬浮导航栏上方、桌面端位于内容区顶部，
 /// 供"智能体·群聊"合并 tab 与"发现"tab 切换子页（智能体/群聊）使用。
 class SubTabSwitcher extends StatelessWidget {
@@ -41,71 +41,72 @@ class SubTabSwitcher extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isDark = scheme.brightness == Brightness.dark;
-    return Container(
+    return SizedBox(
       width: _width,
       height: _height,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        // 与底部悬浮导航栏呼应的半透明浮层底色
-        color: scheme.surface.withValues(alpha: isDark ? 0.92 : 0.94),
-        borderRadius: BorderRadius.circular(AppTheme.radiusFull),
-        border: Border.all(
-          color: isDark
-              ? scheme.outlineVariant.withValues(alpha: 0.65)
-              : scheme.outlineVariant.withValues(alpha: 0.5),
-          width: 0.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: scheme.shadow.withValues(alpha: isDark ? 0.3 : 0.16),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // 选中态 primary 滑块：左右两槽位间平移
-          AnimatedAlign(
-            alignment: secondSelected
-                ? Alignment.centerRight
-                : Alignment.centerLeft,
-            duration: _duration,
-            curve: Curves.easeOutCubic,
-            child: FractionallySizedBox(
-              widthFactor: 0.5,
-              heightFactor: 1,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: scheme.primary,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusFull),
-                ),
-              ),
-            ),
-          ),
-          Row(
+      child: LiquidGlassSurface(
+        key: const Key('sub-tab-glass-surface'),
+        scheme: scheme,
+        radius: BorderRadius.circular(20),
+        magnification: 1.08,
+        edgeWidth: 6,
+        blurSigma: isDark ? 2.6 : 2.2,
+        debugLabel: 'sub-tab',
+        surfaceKey: const Key('sub-tab-glass-surface-layer'),
+        blurKey: const Key('sub-tab-glass-blur'),
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          child: Stack(
             children: [
-              Expanded(
-                child: _option(
-                  scheme: scheme,
-                  icon: firstIcon,
-                  label: firstLabel,
-                  selected: !secondSelected,
-                  onTap: () => onChanged(false),
+              AnimatedAlign(
+                alignment: secondSelected
+                    ? Alignment.centerRight
+                    : Alignment.centerLeft,
+                duration: _duration,
+                curve: Curves.easeOutCubic,
+                child: FractionallySizedBox(
+                  widthFactor: 0.5,
+                  heightFactor: 1,
+                  child: LiquidGlassSurface(
+                    key: const Key('sub-tab-selected-glass-surface'),
+                    scheme: scheme,
+                    radius: BorderRadius.circular(17),
+                    magnification: 1.12,
+                    edgeWidth: 5,
+                    blurSigma: isDark ? 2.4 : 2.0,
+                    debugLabel: 'sub-tab-selected',
+                    surfaceKey: const Key(
+                      'sub-tab-selected-glass-surface-layer',
+                    ),
+                    child: const SizedBox.expand(),
+                  ),
                 ),
               ),
-              Expanded(
-                child: _option(
-                  scheme: scheme,
-                  icon: secondIcon,
-                  label: secondLabel,
-                  selected: secondSelected,
-                  onTap: () => onChanged(true),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _option(
+                      scheme: scheme,
+                      icon: firstIcon,
+                      label: firstLabel,
+                      selected: !secondSelected,
+                      onTap: () => onChanged(false),
+                    ),
+                  ),
+                  Expanded(
+                    child: _option(
+                      scheme: scheme,
+                      icon: secondIcon,
+                      label: secondLabel,
+                      selected: secondSelected,
+                      onTap: () => onChanged(true),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -123,7 +124,7 @@ class SubTabSwitcher extends StatelessWidget {
       child: Center(
         child: TweenAnimationBuilder<Color?>(
           tween: ColorTween(
-            end: selected ? scheme.onPrimary : scheme.onSurfaceVariant,
+            end: selected ? scheme.primary : scheme.onSurfaceVariant,
           ),
           duration: _duration,
           builder: (context, color, _) => Row(
